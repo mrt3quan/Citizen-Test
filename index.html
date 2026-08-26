@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Civic Test — Study App</title>
+<meta name="description" content="Learn and practice the 100 official U.S. civics test questions — multiple choice, writing, and flashcard modes." />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0f1923" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Civic Test" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" href="icon-192.png" />
+
+<style>
+  html, body { margin: 0; padding: 0; background: #0f1923; overscroll-behavior: none; }
+  * { -webkit-tap-highlight-color: transparent; }
+  #root { min-height: 100vh; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #2a3a50; border-radius: 6px; }
+</style>
+
+<!-- React + Babel (CDN) — makes this a plain web page, no build step needed -->
+<script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#6b7a99;font-family:sans-serif;font-size:14px;">
+    Loading…
+  </div>
+</div>
+
+<!-- App source stored as inert data (type="text/plain" so the browser never
+     tries to execute it directly) — we transform and run it manually below
+     using the CLASSIC JSX runtime, since react/react-dom are loaded as plain
+     globals (not ES modules). Newer Babel defaults to the "automatic" JSX
+     runtime, which injects an `import` statement for react/jsx-runtime and
+     crashes when run as a normal (non-module) script — classic mode avoids
+     that entirely. -->
+<script type="text/plain" id="app-source">
+// ══════════════════════════════════════════════════════════════════════════
+// U.S. CITIZENSHIP TEST — Standalone Web App (PWA-ready)
+// No login required — everything saves to this device via localStorage
+// ══════════════════════════════════════════════════════════════════════════
+const { useState, useEffect, useRef } = React;
+
+/* ---------- DATA (100 official questions, lessons, keywords, learn tips) ---------- */
+const allQuestions = [
+  { id: 1, category: "Democracy", emoji: "📜", q: "What is the supreme law of the land?", a: "The Constitution", wrong: ["The Declaration of Independence", "The Bill of Rights", "The Federalist Papers"] },
+  { id: 2, category: "Democracy", emoji: "📜", q: "What does the Constitution do?", a: "Sets up and protects the government and rights", wrong: ["Declares independence from Britain", "Creates the military", "Establishes the economy"] },
+  { id: 3, category: "Democracy", emoji: "📜", q: "What are the first three words of the Constitution?", a: "We the People", wrong: ["In Congress Assembled", "We the Citizens", "In God We Trust"] },
+  { id: 4, category: "Democracy", emoji: "📜", q: "What is an amendment?", a: "A change or addition to the Constitution", wrong: ["A type of law passed by Congress", "A presidential order", "A Supreme Court ruling"] },
+  { id: 5, category: "Democracy", emoji: "📜", q: "What do we call the first ten amendments?", a: "The Bill of Rights", wrong: ["The Constitution", "The Declaration of Rights", "The Freedom Acts"] },
+  { id: 6, category: "Democracy", emoji: "🗣️", q: "What is one right from the First Amendment?", a: "Freedom of speech", wrong: ["Right to bear arms", "Right to vote", "Right to a fair trial"] },
+  { id: 7, category: "Democracy", emoji: "📜", q: "How many amendments does the Constitution have?", a: "27", wrong: ["10", "21", "33"] },
+  { id: 8, category: "Democracy", emoji: "🗽", q: "What did the Declaration of Independence do?", a: "Declared freedom from Great Britain", wrong: ["Created the U.S. Constitution", "Ended the Civil War", "Established the Supreme Court"] },
+  { id: 9, category: "Democracy", emoji: "🗽", q: "What are two rights in the Declaration of Independence?", a: "Life and liberty", wrong: ["Speech and religion", "Voting and education", "Safety and property"] },
+  { id: 10, category: "Democracy", emoji: "🙏", q: "What is freedom of religion?", a: "You can practice any religion, or none", wrong: ["You must follow one religion", "The government chooses your religion", "Only Christians have religious freedom"] },
+  { id: 11, category: "Democracy", emoji: "💰", q: "What is the economic system in the United States?", a: "Capitalist / market economy", wrong: ["Socialist economy", "Communist economy", "Monarchy economy"] },
+  { id: 12, category: "Democracy", emoji: "⚖️", q: "What is the 'rule of law'?", a: "No one is above the law", wrong: ["The President makes all laws", "Laws only apply to citizens", "Congress can override any law"] },
+
+  { id: 13, category: "Government", emoji: "🏛️", q: "Name one branch of the government.", a: "The legislative (Congress)", wrong: ["The military", "The Cabinet", "The Supreme Leader"] },
+  { id: 14, category: "Government", emoji: "⚖️", q: "What stops one branch from becoming too powerful?", a: "Checks and balances", wrong: ["The President's veto only", "The Supreme Court alone", "Public elections"] },
+  { id: 15, category: "Government", emoji: "🏛️", q: "Who is in charge of the executive branch?", a: "The President", wrong: ["The Speaker of the House", "The Chief Justice", "The Vice President"] },
+  { id: 16, category: "Government", emoji: "📋", q: "Who makes federal laws?", a: "Congress", wrong: ["The President", "The Supreme Court", "The Governor"] },
+  { id: 17, category: "Government", emoji: "🏛️", q: "What are the two parts of U.S. Congress?", a: "The Senate and House of Representatives", wrong: ["The President and Vice President", "The Supreme Court and Congress", "The House and the Cabinet"] },
+  { id: 18, category: "Government", emoji: "🔢", q: "How many U.S. Senators are there?", a: "100", wrong: ["50", "435", "535"] },
+  { id: 19, category: "Government", emoji: "🗓️", q: "How many years do we elect a U.S. Senator for?", a: "6 years", wrong: ["2 years", "4 years", "8 years"] },
+  { id: 20, category: "Government", emoji: "🏔️", q: "Who is one of Washington State's U.S. Senators?", a: "Patty Murray", wrong: ["Rick Larsen", "Bob Ferguson", "Maria Cantwell"] },
+  { id: 21, category: "Government", emoji: "🔢", q: "How many voting members are in the House of Representatives?", a: "435", wrong: ["100", "50", "270"] },
+  { id: 22, category: "Government", emoji: "🗓️", q: "How many years do we elect a U.S. Representative for?", a: "2 years", wrong: ["4 years", "6 years", "8 years"] },
+  { id: 23, category: "Government", emoji: "🏔️", q: "Who is the U.S. Representative for Bellingham, WA?", a: "Rick Larsen", wrong: ["Patty Murray", "Bob Ferguson", "Maria Cantwell"] },
+  { id: 24, category: "Government", emoji: "🗳️", q: "Who does a U.S. Senator represent?", a: "All people of the state", wrong: ["Only their political party", "Only the people who voted for them", "Only their district"] },
+  { id: 25, category: "Government", emoji: "👥", q: "Why do some states have more Representatives?", a: "Because of their larger population", wrong: ["Because they are bigger in size", "Because they are older states", "Because they pay more taxes"] },
+  { id: 26, category: "Government", emoji: "🗓️", q: "How many years do we elect a President for?", a: "4 years", wrong: ["2 years", "6 years", "8 years"] },
+  { id: 27, category: "Government", emoji: "📅", q: "In what month do we vote for President?", a: "November", wrong: ["October", "December", "January"] },
+  { id: 28, category: "Government", emoji: "🇺🇸", q: "Who is the President of the United States now?", a: "Donald Trump", wrong: ["Joe Biden", "JD Vance", "Mike Johnson"] },
+  { id: 29, category: "Government", emoji: "🇺🇸", q: "Who is the Vice President of the United States now?", a: "JD Vance", wrong: ["Donald Trump", "Mike Johnson", "Kamala Harris"] },
+  { id: 30, category: "Government", emoji: "🔄", q: "If the President can no longer serve, who becomes President?", a: "The Vice President", wrong: ["The Speaker of the House", "The Chief Justice", "The Secretary of State"] },
+  { id: 31, category: "Government", emoji: "🔄", q: "If both President and VP can't serve, who becomes President?", a: "The Speaker of the House", wrong: ["The Chief Justice", "The Secretary of State", "The Senate Majority Leader"] },
+  { id: 32, category: "Government", emoji: "🎖️", q: "Who is Commander in Chief of the military?", a: "The President", wrong: ["The Secretary of Defense", "The Joint Chiefs of Staff", "Congress"] },
+  { id: 33, category: "Government", emoji: "✍️", q: "Who signs bills to become laws?", a: "The President", wrong: ["The Speaker of the House", "The Chief Justice", "The Vice President"] },
+  { id: 34, category: "Government", emoji: "🚫", q: "Who vetoes bills?", a: "The President", wrong: ["The Supreme Court", "The Senate", "The Vice President"] },
+  { id: 35, category: "Government", emoji: "🤝", q: "What does the President's Cabinet do?", a: "Advises the President", wrong: ["Makes federal laws", "Approves Supreme Court justices", "Declares war"] },
+  { id: 36, category: "Government", emoji: "🏢", q: "What are two Cabinet-level positions?", a: "Secretary of State and Secretary of Defense", wrong: ["Mayor and Governor", "Speaker and Chief Justice", "Sheriff and Attorney"] },
+  { id: 37, category: "Government", emoji: "⚖️", q: "What does the judicial branch do?", a: "Reviews and interprets laws", wrong: ["Makes laws", "Enforces laws", "Collects taxes"] },
+  { id: 38, category: "Government", emoji: "⚖️", q: "What is the highest court in the United States?", a: "The Supreme Court", wrong: ["The Federal Court", "The Court of Appeals", "The District Court"] },
+  { id: 39, category: "Government", emoji: "🔢", q: "How many justices are on the Supreme Court?", a: "9", wrong: ["7", "11", "12"] },
+  { id: 40, category: "Government", emoji: "⚖️", q: "Who is the Chief Justice of the United States?", a: "John G. Roberts, Jr.", wrong: ["Clarence Thomas", "Sonia Sotomayor", "Amy Coney Barrett"] },
+  { id: 41, category: "Government", emoji: "🏛️", q: "What is one power of the federal government?", a: "To print money", wrong: ["To issue driver's licenses", "To approve zoning", "To run public schools"] },
+  { id: 42, category: "Government", emoji: "🏠", q: "What is one power of the states?", a: "Issue driver's licenses", wrong: ["Print money", "Declare war", "Make treaties with other countries"] },
+  { id: 43, category: "Government", emoji: "🏔️", q: "Who is the Governor of Washington State?", a: "Bob Ferguson", wrong: ["Jay Inslee", "Patty Murray", "Rick Larsen"] },
+  { id: 44, category: "Government", emoji: "🏛️", q: "What is the capital of Washington State?", a: "Olympia", wrong: ["Seattle", "Spokane", "Bellingham"] },
+  { id: 45, category: "Government", emoji: "🗳️", q: "What are the two major political parties in the U.S.?", a: "Democratic and Republican", wrong: ["Liberal and Conservative", "Federalist and Whig", "Green and Libertarian"] },
+  { id: 46, category: "Government", emoji: "🐘", q: "What is the political party of the President now?", a: "Republican", wrong: ["Democratic", "Independent", "Libertarian"] },
+  { id: 47, category: "Government", emoji: "🏛️", q: "Who is the Speaker of the House now?", a: "Mike Johnson", wrong: ["Nancy Pelosi", "Kevin McCarthy", "Paul Ryan"] },
+
+  { id: 48, category: "Rights", emoji: "🗳️", q: "Describe one amendment about voting.", a: "Citizens 18 and older can vote", wrong: ["Only landowners can vote", "Only men can vote", "You must pay a tax to vote"] },
+  { id: 49, category: "Rights", emoji: "⚖️", q: "What is one responsibility only for U.S. citizens?", a: "Serve on a jury", wrong: ["Pay taxes", "Obey the law", "Send children to school"] },
+  { id: 50, category: "Rights", emoji: "🗳️", q: "Name one right only for U.S. citizens.", a: "Vote in a federal election", wrong: ["Freedom of speech", "Right to a fair trial", "Right to education"] },
+  { id: 51, category: "Rights", emoji: "🗣️", q: "What are two rights of everyone in the United States?", a: "Freedom of speech and religion", wrong: ["Right to vote and run for office", "Free healthcare and education", "Right to a job and housing"] },
+  { id: 52, category: "Rights", emoji: "🇺🇸", q: "What do we show loyalty to in the Pledge of Allegiance?", a: "The United States and the flag", wrong: ["The President and Congress", "The Constitution and the Army", "The Supreme Court and the Senate"] },
+  { id: 53, category: "Rights", emoji: "🤝", q: "What is one promise when you become a U.S. citizen?", a: "Be loyal to the United States", wrong: ["Give up your native language", "Move to Washington D.C.", "Join the military immediately"] },
+  { id: 54, category: "Rights", emoji: "🗳️", q: "How old must citizens be to vote for President?", a: "18 and older", wrong: ["16 and older", "21 and older", "25 and older"] },
+  { id: 55, category: "Rights", emoji: "🤝", q: "Name two ways Americans participate in democracy.", a: "Vote and join a political party", wrong: ["Pay taxes and drive", "Go to school and work", "Own property and travel"] },
+  { id: 56, category: "Rights", emoji: "📅", q: "Last day to send in federal income tax forms?", a: "April 15", wrong: ["March 15", "May 1", "January 31"] },
+  { id: 57, category: "Rights", emoji: "🎖️", q: "When must men register for the Selective Service?", a: "At age 18 (up to age 26)", wrong: ["At age 16", "At age 21", "At age 25"] },
+
+  { id: 58, category: "History", emoji: "⛵", q: "Why did colonists come to America?", a: "Religious freedom and opportunity", wrong: ["To find gold only", "To escape famine", "To conquer Native Americans"] },
+  { id: 59, category: "History", emoji: "🪶", q: "Who lived in America before Europeans arrived?", a: "American Indians / Native Americans", wrong: ["The Spanish", "The French", "The Vikings"] },
+  { id: 60, category: "History", emoji: "⛓️", q: "What group was taken to America and sold as slaves?", a: "Africans", wrong: ["Native Americans", "Irish immigrants", "Chinese workers"] },
+  { id: 61, category: "History", emoji: "⚔️", q: "Why did colonists fight the British?", a: "Taxation without representation", wrong: ["Religious differences", "Land disputes with Canada", "Disagreements about slavery"] },
+  { id: 62, category: "History", emoji: "✍️", q: "Who wrote the Declaration of Independence?", a: "Thomas Jefferson", wrong: ["George Washington", "Benjamin Franklin", "John Adams"] },
+  { id: 63, category: "History", emoji: "📅", q: "When was the Declaration of Independence adopted?", a: "July 4, 1776", wrong: ["July 4, 1787", "June 21, 1776", "September 17, 1787"] },
+  { id: 64, category: "History", emoji: "🗺️", q: "Name one of the 13 original states.", a: "Virginia", wrong: ["Florida", "Texas", "California"] },
+  { id: 65, category: "History", emoji: "📜", q: "What happened at the Constitutional Convention?", a: "The Constitution was written", wrong: ["The Declaration was signed", "The Civil War ended", "The Bill of Rights was added"] },
+  { id: 66, category: "History", emoji: "📅", q: "When was the Constitution written?", a: "1787", wrong: ["1776", "1800", "1791"] },
+  { id: 67, category: "History", emoji: "📝", q: "Name one writer of the Federalist Papers.", a: "James Madison", wrong: ["Thomas Jefferson", "George Washington", "John Hancock"] },
+  { id: 68, category: "History", emoji: "🔑", q: "What is one thing Benjamin Franklin is famous for?", a: "First Postmaster General of the U.S.", wrong: ["First President", "Wrote the Declaration of Independence", "Led the Continental Army"] },
+  { id: 69, category: "History", emoji: "🎖️", q: "Who is the 'Father of Our Country'?", a: "George Washington", wrong: ["Thomas Jefferson", "Benjamin Franklin", "John Adams"] },
+  { id: 70, category: "History", emoji: "🏛️", q: "Who was the first President?", a: "George Washington", wrong: ["John Adams", "Thomas Jefferson", "Benjamin Franklin"] },
+
+  { id: 71, category: "1800s", emoji: "🗺️", q: "What territory did the U.S. buy from France in 1803?", a: "The Louisiana Territory", wrong: ["The Florida Territory", "The Texas Territory", "The Oregon Territory"] },
+  { id: 72, category: "1800s", emoji: "⚔️", q: "Name one war fought by the U.S. in the 1800s.", a: "The Civil War", wrong: ["World War I", "The Vietnam War", "The Korean War"] },
+  { id: 73, category: "1800s", emoji: "⚔️", q: "What was the U.S. war between the North and South?", a: "The Civil War", wrong: ["The Revolutionary War", "The War of 1812", "The Spanish-American War"] },
+  { id: 74, category: "1800s", emoji: "⛓️", q: "Name one problem that led to the Civil War.", a: "Slavery", wrong: ["Taxation without representation", "Religious freedom", "Territorial disputes with Britain"] },
+  { id: 75, category: "1800s", emoji: "🎩", q: "What was one important thing Abraham Lincoln did?", a: "Freed the slaves (Emancipation Proclamation)", wrong: ["Won World War I", "Wrote the Constitution", "Purchased the Louisiana Territory"] },
+  { id: 76, category: "1800s", emoji: "📜", q: "What did the Emancipation Proclamation do?", a: "Freed the slaves in the Confederacy", wrong: ["Ended World War II", "Gave women the right to vote", "Created the Bill of Rights"] },
+  { id: 77, category: "1800s", emoji: "✊", q: "What did Susan B. Anthony do?", a: "Fought for women's rights", wrong: ["Led the Civil War", "Wrote the Constitution", "Founded the Democratic Party"] },
+
+  { id: 78, category: "Modern History", emoji: "🌍", q: "Name one war fought by the U.S. in the 1900s.", a: "World War II", wrong: ["The Civil War", "The Revolutionary War", "The War of 1812"] },
+  { id: 79, category: "Modern History", emoji: "🎖️", q: "Who was President during World War I?", a: "Woodrow Wilson", wrong: ["Franklin Roosevelt", "Theodore Roosevelt", "Herbert Hoover"] },
+  { id: 80, category: "Modern History", emoji: "🎖️", q: "Who was President during the Great Depression and WWII?", a: "Franklin Roosevelt", wrong: ["Woodrow Wilson", "Harry Truman", "Herbert Hoover"] },
+  { id: 81, category: "Modern History", emoji: "🌍", q: "Who did the U.S. fight in World War II?", a: "Japan, Germany, and Italy", wrong: ["Russia, China, and Korea", "France, Spain, and Britain", "Vietnam, Korea, and China"] },
+  { id: 82, category: "Modern History", emoji: "🎖️", q: "Before being President, Eisenhower was a general. What war?", a: "World War II", wrong: ["World War I", "The Korean War", "The Vietnam War"] },
+  { id: 83, category: "Modern History", emoji: "❄️", q: "During the Cold War, what was the U.S.'s main concern?", a: "Communism", wrong: ["Terrorism", "Nuclear power", "Economic depression"] },
+  { id: 84, category: "Modern History", emoji: "✊", q: "What movement tried to end racial discrimination?", a: "The Civil Rights Movement", wrong: ["The Women's Suffrage Movement", "The Labor Movement", "The Independence Movement"] },
+  { id: 85, category: "Modern History", emoji: "✊", q: "What did Martin Luther King, Jr. do?", a: "Fought for civil rights and equality", wrong: ["Led the U.S. in World War II", "Wrote the Constitution", "Founded the NAACP"] },
+  { id: 86, category: "Modern History", emoji: "🗓️", q: "What major event happened on September 11, 2001?", a: "Terrorists attacked the United States", wrong: ["The U.S. declared war on Iraq", "Hurricane Katrina struck New Orleans", "The Berlin Wall fell"] },
+  { id: 87, category: "Modern History", emoji: "🪶", q: "Name one American Indian tribe.", a: "Cherokee", wrong: ["Aztec", "Inca", "Maya"] },
+
+  { id: 88, category: "Geography", emoji: "🏞️", q: "Name one of the two longest rivers in the U.S.", a: "The Mississippi River", wrong: ["The Colorado River", "The Rio Grande", "The Columbia River"] },
+  { id: 89, category: "Geography", emoji: "🌊", q: "What ocean is on the West Coast of the U.S.?", a: "The Pacific Ocean", wrong: ["The Atlantic Ocean", "The Indian Ocean", "The Arctic Ocean"] },
+  { id: 90, category: "Geography", emoji: "🌊", q: "What ocean is on the East Coast of the U.S.?", a: "The Atlantic Ocean", wrong: ["The Pacific Ocean", "The Caribbean Sea", "The Gulf of Mexico"] },
+  { id: 91, category: "Geography", emoji: "🏝️", q: "Name one U.S. territory.", a: "Puerto Rico", wrong: ["Hawaii", "Cuba", "Bahamas"] },
+  { id: 92, category: "Geography", emoji: "🍁", q: "Name one state that borders Canada.", a: "Washington", wrong: ["California", "Florida", "Texas"] },
+  { id: 93, category: "Geography", emoji: "🌵", q: "Name one state that borders Mexico.", a: "California", wrong: ["Nevada", "Oregon", "Washington"] },
+  { id: 94, category: "Geography", emoji: "🏛️", q: "What is the capital of the United States?", a: "Washington, D.C.", wrong: ["New York City", "Los Angeles", "Chicago"] },
+  { id: 95, category: "Geography", emoji: "🗽", q: "Where is the Statue of Liberty?", a: "New York Harbor / Liberty Island", wrong: ["Washington, D.C.", "Philadelphia", "Boston Harbor"] },
+
+  { id: 96, category: "Symbols", emoji: "🇺🇸", q: "Why does the flag have 13 stripes?", a: "For the 13 original colonies", wrong: ["For the 13 original states' capitals", "For the 13 founding fathers", "For the 13 years of independence"] },
+  { id: 97, category: "Symbols", emoji: "🇺🇸", q: "Why does the flag have 50 stars?", a: "One star for each state", wrong: ["One star for each President", "One star for each territory", "One star for each founding father"] },
+  { id: 98, category: "Symbols", emoji: "🎵", q: "What is the name of the national anthem?", a: "The Star-Spangled Banner", wrong: ["America the Beautiful", "God Bless America", "My Country 'Tis of Thee"] },
+  { id: 99, category: "Symbols", emoji: "🎆", q: "When do we celebrate Independence Day?", a: "July 4", wrong: ["June 14", "September 17", "November 11"] },
+  { id: 100, category: "Symbols", emoji: "🎉", q: "Name two national U.S. holidays.", a: "Thanksgiving and Christmas", wrong: ["Valentine's Day and Easter", "Halloween and St. Patrick's Day", "Mother's Day and Father's Day"] },
+];
+
+const LESSONS = [
+  { id: 1, title: "Principles of Democracy", emoji: "📜", color: "#4A90D9", ids: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  { id: 2, title: "System of Government", emoji: "🏛️", color: "#E85D4A", ids: [13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] },
+  { id: 3, title: "Executive & Judicial", emoji: "⚖️", color: "#F5A623", ids: [31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47] },
+  { id: 4, title: "Rights & Responsibilities", emoji: "🗳️", color: "#7ED321", ids: [48,49,50,51,52,53,54,55,56,57] },
+  { id: 5, title: "Colonial History", emoji: "⛵", color: "#9B59B6", ids: [58,59,60,61,62,63,64,65,66,67,68,69,70] },
+  { id: 6, title: "1800s America", emoji: "🎩", color: "#E67E22", ids: [71,72,73,74,75,76,77] },
+  { id: 7, title: "Modern History", emoji: "🌍", color: "#1ABC9C", ids: [78,79,80,81,82,83,84,85,86,87] },
+  { id: 8, title: "Geography & Symbols", emoji: "🗺️", color: "#E91E63", ids: [88,89,90,91,92,93,94,95,96,97,98,99,100] },
+];
+
+const KEYWORDS = {
+  1: ["constitution"],
+  2: ["sets up","defines","protects","government","rights"],
+  3: ["we","people"],
+  4: ["change","addition","constitution"],
+  5: ["bill","rights"],
+  6: ["speech","religion","assembly","press","petition"],
+  7: ["27","twenty","seven"],
+  8: ["independence","britain","free","declared"],
+  9: ["life","liberty","happiness","pursuit"],
+  10: ["practice","religion","none","any"],
+  11: ["capitalist","market","economy"],
+  12: ["law","above","everyone","no one"],
+  13: ["congress","legislative","president","executive","courts","judicial"],
+  14: ["checks","balances","separation","powers"],
+  15: ["president"],
+  16: ["congress","senate","house"],
+  17: ["senate","house","representatives"],
+  18: ["100","one hundred"],
+  19: ["6","six"],
+  20: ["murray","cantwell"],
+  21: ["435","four hundred"],
+  22: ["2","two"],
+  23: ["larsen"],
+  24: ["all","state","people"],
+  25: ["population","people","more"],
+  26: ["4","four"],
+  27: ["november"],
+  28: ["trump","donald"],
+  29: ["vance","jd"],
+  30: ["vice","president"],
+  31: ["speaker","house"],
+  32: ["president"],
+  33: ["president"],
+  34: ["president"],
+  35: ["advises","president","cabinet"],
+  36: ["secretary","attorney","vice"],
+  37: ["reviews","explains","laws","disputes","constitution"],
+  38: ["supreme","court"],
+  39: ["9","nine"],
+  40: ["roberts","john"],
+  41: ["money","war","army","treaties"],
+  42: ["school","police","license","zoning","safety"],
+  43: ["ferguson","bob"],
+  44: ["olympia"],
+  45: ["democratic","republican"],
+  46: ["republican"],
+  47: ["johnson","mike"],
+  48: ["18","eighteen","poll","tax","women","race"],
+  49: ["jury","federal","election","vote"],
+  50: ["vote","federal","office"],
+  51: ["speech","religion","assembly","expression","petition","bear","arms"],
+  52: ["united states","flag"],
+  53: ["loyal","loyalty","defend","constitution","obey"],
+  54: ["18","eighteen"],
+  55: ["vote","party","campaign","civic","office","newspaper","senator"],
+  56: ["april","15"],
+  57: ["18","eighteen","26","twenty"],
+  58: ["freedom","liberty","religious","economic","persecution"],
+  59: ["indian","native","american"],
+  60: ["african","africa","slaves"],
+  61: ["tax","representation","self","government","quartering"],
+  62: ["jefferson","thomas"],
+  63: ["1776","july","4"],
+  64: ["new hampshire","massachusetts","rhode","connecticut","new york","new jersey","pennsylvania","delaware","maryland","virginia","carolina","georgia"],
+  65: ["constitution","written","founding","fathers"],
+  66: ["1787"],
+  67: ["madison","hamilton","jay","publius"],
+  68: ["diplomat","postmaster","almanac","libraries","convention"],
+  69: ["washington","george"],
+  70: ["washington","george"],
+  71: ["louisiana"],
+  72: ["1812","mexican","civil","spanish"],
+  73: ["civil","war","states"],
+  74: ["slavery","economic","states","rights"],
+  75: ["slaves","emancipation","union","civil"],
+  76: ["freed","slaves","confederacy","southern"],
+  77: ["women","rights","civil"],
+  78: ["world","korean","vietnam","gulf"],
+  79: ["wilson","woodrow"],
+  80: ["roosevelt","franklin"],
+  81: ["japan","germany","italy"],
+  82: ["world","war","ii","two"],
+  83: ["communism","communist"],
+  84: ["civil","rights"],
+  85: ["civil","rights","equality"],
+  86: ["terrorist","attacked","september","9/11"],
+  87: ["cherokee","navajo","sioux","apache","iroquois","seminole","chippewa","choctaw","pueblo","creek","blackfeet","cheyenne","shawnee","mohegan","huron","oneida","lakota","crow","hopi","inuit","arawak","teton"],
+  88: ["missouri","mississippi"],
+  89: ["pacific"],
+  90: ["atlantic"],
+  91: ["puerto rico","virgin","samoa","mariana","guam"],
+  92: ["maine","new hampshire","vermont","new york","pennsylvania","ohio","michigan","minnesota","dakota","montana","idaho","washington","alaska"],
+  93: ["california","arizona","new mexico","texas"],
+  94: ["washington","dc","d.c"],
+  95: ["new york","liberty","island","harbor"],
+  96: ["13","colonies","original"],
+  97: ["50","fifty","state","star"],
+  98: ["star","spangled","banner"],
+  99: ["july","4"],
+  100: ["new year","king","presidents","memorial","independence","labor","columbus","veterans","thanksgiving","christmas"],
+};
+
+const LEARN = {
+  1:  { core: ["Constitution"], tip: "One word only. The Constitution = #1 law of the land." },
+  2:  { core: ["Sets up","defines","protects"], tip: "3 jobs: sets up · defines · protects. Think S-D-P." },
+  3:  { core: ["We the People"], tip: "The very first 3 words. Self-government starts with the people." },
+  4:  { core: ["change","addition"], tip: "Amendment = change OR addition. Either word works." },
+  5:  { core: ["Bill of Rights"], tip: "First 10 amendments = Bill of Rights. Always capitalized." },
+  6:  { core: ["speech","religion","assembly","press","petition"], tip: "5 freedoms in 1 amendment: SRAPP — Speech, Religion, Assembly, Press, Petition." },
+  7:  { core: ["27"], tip: "27 amendments total. The first 10 = Bill of Rights." },
+  8:  { core: ["independence","Great Britain"], tip: "Declared independence FROM Great Britain. Direction matters." },
+  9:  { core: ["life","liberty","pursuit of happiness"], tip: "3 rights. You only need to name 2. Life and liberty is easiest." },
+  10: { core: ["any religion","none"], tip: "Key: ANY religion OR none at all. Total freedom of choice." },
+  11: { core: ["capitalist","market"], tip: "Either word works: capitalist economy OR market economy." },
+  12: { core: ["No one","above the law"], tip: "Rule of law = no one is above it. Not even the President." },
+  13: { core: ["legislative","executive","judicial"], tip: "3 branches: Congress (legislative) · President (executive) · Courts (judicial)." },
+  14: { core: ["checks and balances","separation of powers"], tip: "Either phrase works. They mean the same thing — balance of power." },
+  15: { core: ["President"], tip: "Executive branch = the President. Simple." },
+  16: { core: ["Congress"], tip: "Congress makes laws. Not the President, not the courts." },
+  17: { core: ["Senate","House of Representatives"], tip: "Congress = Senate + House. Two halves, one Congress." },
+  18: { core: ["100"], tip: "100 senators = 2 per state × 50 states. Easy math!" },
+  19: { core: ["6"], tip: "Senator = 6-year term. Longest of the three elected offices." },
+  20: { core: ["Patty Murray","Maria Cantwell"], tip: "Washington State has 2 senators. Either name is correct." },
+  21: { core: ["435"], tip: "435 House members. Based on population — more people = more reps." },
+  22: { core: ["2"], tip: "Representative = 2-year term. Shortest term, most frequent elections." },
+  23: { core: ["Rick Larsen"], tip: "Bellingham is in WA-2nd District. Rep = Rick Larsen." },
+  24: { core: ["all people","state"], tip: "A senator represents ALL people of their state, not just voters." },
+  25: { core: ["population"], tip: "More people in a state = more Representatives. Population is the key word." },
+  26: { core: ["4"], tip: "President = 4-year term. Max 2 terms = 8 years total." },
+  27: { core: ["November"], tip: "Presidential election = always November. First Tuesday after first Monday." },
+  28: { core: ["Donald Trump"], tip: "Current President. Also acceptable: Trump." },
+  29: { core: ["JD Vance"], tip: "Current Vice President. Also acceptable: Vance." },
+  30: { core: ["Vice President"], tip: "If President can't serve → VP takes over. Line of succession #1." },
+  31: { core: ["Speaker of the House"], tip: "If both President AND VP can't serve → Speaker of the House. Line #2." },
+  32: { core: ["President"], tip: "Commander in Chief = the President. Civilian controls the military." },
+  33: { core: ["President"], tip: "President signs bills → they become law. President vetoes → bill is rejected." },
+  34: { core: ["President"], tip: "Only the President can veto (reject) a bill passed by Congress." },
+  35: { core: ["advises"], tip: "Cabinet advises the President. They don't make laws or vote." },
+  36: { core: ["Secretary","Attorney General","Vice President"], tip: "Cabinet = department Secretaries + Attorney General + VP. Just name any two." },
+  37: { core: ["reviews","explains","resolves"], tip: "Judicial = reviews · explains · resolves. Courts interpret, not make, laws." },
+  38: { core: ["Supreme Court"], tip: "Highest court = Supreme Court. No court is above it." },
+  39: { core: ["9"], tip: "9 justices on the Supreme Court. 1 Chief Justice + 8 Associate Justices." },
+  40: { core: ["John G. Roberts"], tip: "Chief Justice = John G. Roberts, Jr. Also acceptable: John Roberts." },
+  41: { core: ["print money","declare war","army","treaties"], tip: "Federal powers: money · war · army · treaties. States can't do these." },
+  42: { core: ["schooling","police","driver's license","zoning"], tip: "State powers: schools · police · licenses · zoning. Local matters." },
+  43: { core: ["Bob Ferguson"], tip: "Governor of Washington State = Bob Ferguson." },
+  44: { core: ["Olympia"], tip: "Capital of Washington = Olympia. Not Seattle!" },
+  45: { core: ["Democratic","Republican"], tip: "Two major parties: Democratic (donkey 🫏) and Republican (elephant 🐘)." },
+  46: { core: ["Republican"], tip: "President Trump's party = Republican." },
+  47: { core: ["Mike Johnson"], tip: "Speaker of the House = Mike Johnson. Also acceptable: Johnson." },
+  48: { core: ["18","poll tax","women","any race"], tip: "4 voting amendments: age 18 · no poll tax · women · any race male." },
+  49: { core: ["jury","federal election"], tip: "Citizens-only duties: serve on jury · vote in federal elections." },
+  50: { core: ["vote","federal office"], tip: "Citizens-only rights: vote + run for federal office. Non-citizens can't." },
+  51: { core: ["speech","religion","assembly","petition","bear arms"], tip: "Everyone in the U.S. has these — citizen or not. Name any two." },
+  52: { core: ["United States","flag"], tip: "Pledge = loyalty to the United States AND the flag. Both count." },
+  53: { core: ["loyal","defend","obey"], tip: "Citizenship promise: be loyal · defend the Constitution · obey the laws." },
+  54: { core: ["18"], tip: "Voting age = 18. Set by the 26th Amendment in 1971." },
+  55: { core: ["vote","party","campaign","civic group","office","newspaper"], tip: "Many ways to participate. Just name any two from the list." },
+  56: { core: ["April 15"], tip: "Tax deadline = April 15. Easy to remember — it's always the same date." },
+  57: { core: ["18","26"], tip: "Selective Service: register at 18, up until age 26." },
+  58: { core: ["freedom","religious","economic","persecution"], tip: "Colonists came for freedom — religious, political, economic. Escape persecution." },
+  59: { core: ["American Indians","Native Americans"], tip: "Either term works. They were here thousands of years before Europeans." },
+  60: { core: ["Africans"], tip: "Enslaved people came from Africa. Forced, not by choice." },
+  61: { core: ["taxation","representation","self-government"], tip: "Famous phrase: 'No taxation without representation.' No voice in government." },
+  62: { core: ["Thomas Jefferson"], tip: "Jefferson wrote it. Washington led the army. Franklin was diplomat. Know the difference!" },
+  63: { core: ["July 4","1776"], tip: "July 4, 1776 = America's birthday. We celebrate it every year!" },
+  64: { core: ["Virginia","New York","Massachusetts","Pennsylvania","Georgia"], tip: "13 original colonies — all on the East Coast. Name any three." },
+  65: { core: ["Constitution","written","Founding Fathers"], tip: "Constitutional Convention (1787) = where the Constitution was written." },
+  66: { core: ["1787"], tip: "Constitution written in 1787. Declaration of Independence was 1776. Don't mix them up!" },
+  67: { core: ["Madison","Hamilton","Jay"], tip: "Federalist Papers writers: Madison · Hamilton · Jay. Or the pen name: Publius." },
+  68: { core: ["diplomat","Postmaster","Poor Richard","libraries"], tip: "Franklin was NOT President. He was diplomat, Postmaster General, inventor, writer." },
+  69: { core: ["George Washington"], tip: "Father of Our Country = George Washington. Also the first President." },
+  70: { core: ["George Washington"], tip: "First President = George Washington. Served 1789–1797." },
+  71: { core: ["Louisiana"], tip: "Louisiana Purchase (1803) from France. Doubled the size of the U.S.!" },
+  72: { core: ["1812","Civil War","Mexican","Spanish"], tip: "1800s wars: War of 1812 · Mexican-American · Civil War · Spanish-American. Pick one." },
+  73: { core: ["Civil War"], tip: "North vs South = Civil War (1861–1865). Also called War Between the States." },
+  74: { core: ["slavery","states' rights","economic"], tip: "Civil War cause: slavery is the most important answer. States' rights and economics also accepted." },
+  75: { core: ["freed the slaves","Emancipation","Union"], tip: "Lincoln: freed slaves (Emancipation Proclamation) · saved the Union · led Civil War." },
+  76: { core: ["freed","slaves","Confederacy"], tip: "Emancipation Proclamation = freed slaves in Confederate (Southern) states." },
+  77: { core: ["women's rights","civil rights"], tip: "Susan B. Anthony fought for women to vote. A civil rights hero." },
+  78: { core: ["World War I","World War II","Korean","Vietnam","Gulf"], tip: "1900s wars: WWI · WWII · Korea · Vietnam · Gulf War. Pick one." },
+  79: { core: ["Woodrow Wilson"], tip: "WWI President = Woodrow Wilson. WWII President = Roosevelt. Don't mix up!" },
+  80: { core: ["Franklin Roosevelt"], tip: "FDR led through both the Great Depression AND WWII. One of the longest-serving presidents." },
+  81: { core: ["Japan","Germany","Italy"], tip: "WWII enemies: Japan · Germany · Italy. The Axis Powers. All three matter." },
+  82: { core: ["World War II"], tip: "Eisenhower was Supreme Allied Commander in WWII, then became President." },
+  83: { core: ["Communism"], tip: "Cold War fear = Communism spreading. The U.S. vs Soviet Union (USSR)." },
+  84: { core: ["civil rights"], tip: "Civil Rights Movement fought racial discrimination in the 1950s–60s." },
+  85: { core: ["civil rights","equality"], tip: "MLK fought for civil rights and equality for ALL Americans. Nobel Peace Prize 1964." },
+  86: { core: ["terrorists","attacked"], tip: "9/11/2001 = terrorists attacked the U.S. Worst attack on U.S. soil." },
+  87: { core: ["Cherokee","Navajo","Sioux","Apache","Iroquois"], tip: "Many tribes are accepted. Learn one you can spell and say easily." },
+  88: { core: ["Missouri","Mississippi"], tip: "Two longest rivers: Missouri (longest) and Mississippi. Either is correct." },
+  89: { core: ["Pacific"], tip: "West Coast = Pacific Ocean. Think: Pacific → left side of the map." },
+  90: { core: ["Atlantic"], tip: "East Coast = Atlantic Ocean. Think: Atlantic → right side of the map." },
+  91: { core: ["Puerto Rico","Virgin Islands","Guam","Samoa","Mariana"], tip: "5 territories. Puerto Rico is the most well-known. Any one is correct." },
+  92: { core: ["Washington","Maine","Alaska","New York","Michigan"], tip: "13 states border Canada. Washington State is one — easy for you to remember!" },
+  93: { core: ["California","Texas","Arizona","New Mexico"], tip: "4 states border Mexico. All in the South and Southwest." },
+  94: { core: ["Washington, D.C."], tip: "U.S. capital = Washington, D.C. NOT Washington State!" },
+  95: { core: ["New York"], tip: "Statue of Liberty = New York Harbor / Liberty Island. Gift from France in 1886." },
+  96: { core: ["13","colonies"], tip: "13 stripes = 13 original colonies. The stripes never change." },
+  97: { core: ["50","state"], tip: "50 stars = 50 states. Stars change as new states join." },
+  98: { core: ["Star-Spangled Banner"], tip: "National anthem = The Star-Spangled Banner. Written by Francis Scott Key in 1814." },
+  99: { core: ["July 4"], tip: "Independence Day = July 4. Celebrates the 1776 Declaration of Independence." },
+  100:{ core: ["Thanksgiving","Christmas","New Year","MLK","Memorial","Labor"], tip: "10 federal holidays. You only need to name 2. Thanksgiving and Christmas are easiest." },
+};
+
+
+/* ---------- STORAGE (device save, no account) ---------- */
+const STORE_KEY = "uscitizen_app_v1";
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function saveStore(state) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function checkAnswer(qId, userAnswer, preferredText) {
+  const lower = (userAnswer || "").toLowerCase().trim();
+  if (!lower) return false;
+  const keys = KEYWORDS[qId] || [];
+  const prefWords = preferredText
+    ? preferredText.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+    : [];
+  const allKeys = [...keys, ...prefWords];
+  const multiPart = [9,17,36,45,51,55,64,81,100];
+  const needed = multiPart.includes(qId) ? 2 : 1;
+  let matched = 0;
+  for (const kw of allKeys) {
+    if (lower.includes(kw.toLowerCase())) matched++;
+    if (matched >= needed) return true;
+  }
+  return false;
+}
+
+function highlightAnswer(answer, coreWords) {
+  if (!coreWords || coreWords.length === 0) return [{ text: answer, hl: false }];
+  const sorted = [...coreWords].sort((a, b) => b.length - a.length);
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${sorted.map(esc).join('|')})`, 'gi');
+  let m; const matches = [];
+  while ((m = regex.exec(answer)) !== null) matches.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+  if (matches.length === 0) return [{ text: answer, hl: false }];
+  const parts = []; let lastEnd = 0;
+  matches.forEach(mm => {
+    if (mm.start > lastEnd) parts.push({ text: answer.slice(lastEnd, mm.start), hl: false });
+    parts.push({ text: mm.text, hl: true });
+    lastEnd = mm.end;
+  });
+  if (lastEnd < answer.length) parts.push({ text: answer.slice(lastEnd), hl: false });
+  return parts;
+}
+
+const OFFICIAL_IDS = [20, 23, 28, 29, 40, 43, 46, 47];
+
+function getOptions(q, effAnswer) {
+  return shuffle([effAnswer, ...q.wrong]);
+}
+
+/* ---------- MAIN APP ---------- */
+function App() {
+  // Persistent (device-saved) state
+  const [xp, setXp] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [completedLessons, setCompletedLessons] = useState({});
+  const [customQuestions, setCustomQuestions] = useState([]);
+  const [preferredAnswers, setPreferredAnswers] = useState({});
+  const [practiceList, setPracticeList] = useState([]);
+  const [testsPassed, setTestsPassed] = useState(0);
+  const [testsTaken, setTestsTaken] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const s = loadStore();
+    if (s) {
+      setXp(s.xp || 0);
+      setStreak(s.streak || 0);
+      setCompletedLessons(s.completedLessons || {});
+      setCustomQuestions(s.customQuestions || []);
+      setPreferredAnswers(s.preferredAnswers || {});
+      setPracticeList(s.practiceList || []);
+      setTestsPassed(s.testsPassed || 0);
+      setTestsTaken(s.testsTaken || 0);
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveStore({ xp, streak, completedLessons, customQuestions, preferredAnswers, practiceList, testsPassed, testsTaken });
+  }, [hydrated, xp, streak, completedLessons, customQuestions, preferredAnswers, practiceList, testsPassed, testsTaken]);
+
+  // Navigation
+  const [screen, setScreen] = useState("home");
+  const [mode, setMode] = useState("multiple");
+  const [currentLesson, setCurrentLesson] = useState(null);
+  const [isFullTest, setIsFullTest] = useState(false);
+
+  // Session state
+  const [questions, setQuestions] = useState([]);
+  const [qIndex, setQIndex] = useState(0);
+  const [hearts, setHearts] = useState(3);
+  const [selected, setSelected] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [xpEarned, setXpEarned] = useState(0);
+  const [showXpPop, setShowXpPop] = useState(false);
+  const [typedAnswer, setTypedAnswer] = useState("");
+  const [writingResult, setWritingResult] = useState(null);
+  const [testResults, setTestResults] = useState([]);
+
+  // Learn-mode state
+  const [learnIndex, setLearnIndex] = useState(0);
+  const [learnRevealed, setLearnRevealed] = useState(false);
+  const [learnKnown, setLearnKnown] = useState(new Set());
+  const [learnDone, setLearnDone] = useState(false);
+
+  // Manage screen state
+  const [manageTab, setManageTab] = useState("practice");
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customDraft, setCustomDraft] = useState({ q: "", a: "" });
+  const [editingQ, setEditingQ] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [answerFilter, setAnswerFilter] = useState("");
+
+  const level = Math.floor(xp / 100) + 1;
+  const xpInLevel = xp % 100;
+
+  function effAnswer(q) { return preferredAnswers[q.id] || q.a; }
+  function allPool() { return [...allQuestions, ...customQuestions]; }
+
+  function resetSession() {
+    setQIndex(0); setHearts(3); setSelected(null); setFeedback(null);
+    setCorrectCount(0); setXpEarned(0); setTypedAnswer(""); setWritingResult(null);
+    setLearnIndex(0); setLearnRevealed(false); setLearnKnown(new Set()); setLearnDone(false);
+    setTestResults([]);
+  }
+
+  function startLesson(lesson, m) {
+    const pool = lesson.custom
+      ? customQuestions
+      : lesson.practiceList
+      ? allPool().filter(q => practiceList.includes(q.id))
+      : lesson.ids.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
+    const qs = shuffle(pool).slice(0, Math.min(pool.length, 8));
+    resetSession();
+    setCurrentLesson(lesson);
+    setIsFullTest(false);
+    setQuestions(qs);
+    setMode(m);
+    setScreen(m === "learn" ? "learn" : "lesson");
+  }
+
+  function startFullTest(m) {
+    const qs = shuffle(allPool()).slice(0, 10);
+    resetSession();
+    setIsFullTest(true);
+    setCurrentLesson({ title: "Full Practice Test", emoji: "🎯", color: "#FF9F00", ids: qs.map(q => q.id) });
+    setQuestions(qs);
+    setMode(m);
+    setScreen(m === "learn" ? "learn" : "lesson");
+  }
+
+  function playCorrect() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [[523,0,0.15],[659,0.15,0.15],[784,0.28,0.2]].forEach(([f,s,d]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type = "sine";
+        o.frequency.setValueAtTime(f, ctx.currentTime + s);
+        g.gain.setValueAtTime(0.25, ctx.currentTime + s);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + s + d);
+        o.start(ctx.currentTime + s); o.stop(ctx.currentTime + s + d);
+      });
+    } catch(e) {}
+  }
+  function playWrong() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [[300,0,0.15],[220,0.15,0.25]].forEach(([f,s,d]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o.type = "sawtooth";
+        o.frequency.setValueAtTime(f, ctx.currentTime + s);
+        g.gain.setValueAtTime(0.15, ctx.currentTime + s);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + s + d);
+        o.start(ctx.currentTime + s); o.stop(ctx.currentTime + s + d);
+      });
+    } catch(e) {}
+  }
+
+  function toggleStruggle(qId) {
+    setPracticeList(prev => prev.includes(qId) ? prev.filter(id => id !== qId) : [...prev, qId]);
+  }
+
+  function handleSelect(option) {
+    if (feedback) return;
+    setSelected(option);
+    const q = questions[qIndex];
+    const correctText = effAnswer(q);
+    const isCorrect = option === correctText;
+    setFeedback(isCorrect ? "correct" : "wrong");
+    if (isCorrect) {
+      playCorrect();
+      setCorrectCount(c => c + 1); setXpEarned(e => e + 10); setXp(x => x + 10);
+      setShowXpPop(true); setTimeout(() => setShowXpPop(false), 1000);
+      setPracticeList(prev => prev.filter(id => id !== q.id));
+    } else {
+      playWrong(); setHearts(h => h - 1);
+      setPracticeList(prev => prev.includes(q.id) ? prev : [...prev, q.id]);
+    }
+    setTestResults(prev => [...prev, { q, correct: isCorrect, userAnswer: option }]);
+  }
+
+  function handleWritingSubmit() {
+    if (!typedAnswer.trim() || writingResult) return;
+    const q = questions[qIndex];
+    const isCorrect = checkAnswer(q.id, typedAnswer, preferredAnswers[q.id]);
+    setWritingResult(isCorrect ? "correct" : "wrong");
+    setFeedback(isCorrect ? "correct" : "wrong");
+    if (isCorrect) {
+      playCorrect();
+      setCorrectCount(c => c + 1); setXpEarned(e => e + 15); setXp(x => x + 15);
+      setShowXpPop(true); setTimeout(() => setShowXpPop(false), 1000);
+      setPracticeList(prev => prev.filter(id => id !== q.id));
+    } else {
+      playWrong(); setHearts(h => h - 1);
+      setPracticeList(prev => prev.includes(q.id) ? prev : [...prev, q.id]);
+    }
+    setTestResults(prev => [...prev, { q, correct: isCorrect, userAnswer: typedAnswer }]);
+  }
+
+  function nextQuestion() {
+    const nextIdx = qIndex + 1;
+    if (hearts <= 0 || nextIdx >= questions.length) {
+      const finalC = correctCount + (feedback === "correct" ? 1 : 0);
+      if (isFullTest) {
+        setTestsTaken(t => t + 1);
+        if (finalC >= 6) { setTestsPassed(p => p + 1); setStreak(s => s + 1); }
+        setScreen("testresult");
+      } else {
+        if (finalC >= Math.ceil(questions.length * 0.6)) {
+          setCompletedLessons(prev => ({ ...prev, [currentLesson.id]: true }));
+          setStreak(s => s + 1);
+        }
+        setScreen("result");
+      }
+    } else {
+      setQIndex(nextIdx); setSelected(null); setFeedback(null);
+      setTypedAnswer(""); setWritingResult(null);
+    }
+  }
+
+  function addCustomQuestion() {
+    if (!customDraft.q.trim() || !customDraft.a.trim()) return;
+    const newId = "c" + Date.now();
+    setCustomQuestions(prev => [...prev, {
+      id: newId, category: "Custom", emoji: "✏️",
+      q: customDraft.q.trim(), a: customDraft.a.trim(),
+      wrong: ["Not this one", "Also incorrect", "Try again"], custom: true,
+    }]);
+    setCustomDraft({ q: "", a: "" });
+    setShowCustomForm(false);
+  }
+  function deleteCustomQuestion(id) {
+    setCustomQuestions(prev => prev.filter(q => q.id !== id));
+    setPracticeList(prev => prev.filter(pid => pid !== id));
+  }
+  function savePreferred(qId, text) {
+    setPreferredAnswers(prev => {
+      const next = { ...prev };
+      if (!text || !text.trim()) delete next[qId];
+      else next[qId] = text.trim();
+      return next;
+    });
+  }
+
+  const q = questions[qIndex];
+  const options = q && mode === "multiple" ? getOptions(q, effAnswer(q)) : [];
+  const progress = questions.length > 0 ? (qIndex / questions.length) * 100 : 0;
+  const finalCorrect = feedback === "correct" ? correctCount + 1 : correctCount;
+
+  const S = { app: { minHeight: "100vh", background: "#0f1923", fontFamily: "'Inter','Helvetica Neue',sans-serif", color: "#fff", maxWidth: 480, margin: "0 auto", padding: "0 0 40px", position: "relative" } };
+
+  /* ============================ HOME ============================ */
+  if (screen === "home") return (
+    <div style={S.app}>
+      <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: "#6b7a99", textTransform: "uppercase", letterSpacing: "0.1em" }}>Streak</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#FF9F00" }}>🔥 {streak}</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: "#6b7a99", textTransform: "uppercase", letterSpacing: "0.1em" }}>XP</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#58CC02" }}>⚡ {xp}</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: "#6b7a99", textTransform: "uppercase", letterSpacing: "0.1em" }}>Level</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#CE82FF" }}>🏆 {level}</div>
+          </div>
+        </div>
+        <button onClick={() => setScreen("manage")} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 12, width: 40, height: 40, fontSize: 18, cursor: "pointer" }}>⚙️</button>
+      </div>
+
+      <div style={{ padding: "12px 20px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#6b7a99", marginBottom: 5 }}>
+          <span>Level {level}</span><span>{xpInLevel}/100 XP</span>
+        </div>
+        <div style={{ height: 6, background: "#1e2d40", borderRadius: 6 }}>
+          <div style={{ height: "100%", width: `${xpInLevel}%`, background: "linear-gradient(90deg,#58CC02,#89E219)", borderRadius: 6, transition: "width 0.5s" }} />
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 20px 8px", textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 4 }}>
+          <img src="assets/mascot-thumbsup.png" alt="" style={{ width: 40, height: 40, objectFit: "contain" }} />
+          <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>Civic Test</h1>
+        </div>
+        <p style={{ color: "#6b7a99", fontSize: 13, margin: 0 }}>{Object.keys(completedLessons).length}/{LESSONS.length} lessons complete</p>
+      </div>
+
+      {practiceList.length > 0 && (
+        <div style={{ padding: "8px 16px 0" }}>
+          <div style={{ background: "linear-gradient(135deg,#FF4B4B22,#FF4B4B11)", border: "1.5px solid #FF4B4B55", borderRadius: 16, padding: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 24 }}>🚩</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>Need More Practice</div>
+                <div style={{ fontSize: 12, color: "#6b7a99" }}>{practiceList.length} question{practiceList.length !== 1 ? "s" : ""} you're still learning</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => startLesson({ id: "practice", title: "Need More Practice", emoji: "🚩", color: "#FF4B4B", practiceList: true }, "writing")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "#FF4B4B", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>✍️ Write</button>
+              <button onClick={() => startLesson({ id: "practice", title: "Need More Practice", emoji: "🚩", color: "#FF4B4B", practiceList: true }, "learn")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "#1e2d40", color: "#FF9F00", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>🧠 Learn</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: "16px 16px 12px", display: "flex", gap: 8 }}>
+        <button onClick={() => setMode("multiple")} style={{ flex: 1, padding: "10px", borderRadius: 12, border: mode === "multiple" ? "2px solid #58CC02" : "2px solid #1e2d40", background: mode === "multiple" ? "#58CC0222" : "#1a2535", color: mode === "multiple" ? "#58CC02" : "#6b7a99", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>🔤 Choice</button>
+        <button onClick={() => setMode("writing")} style={{ flex: 1, padding: "10px", borderRadius: 12, border: mode === "writing" ? "2px solid #CE82FF" : "2px solid #1e2d40", background: mode === "writing" ? "#CE82FF22" : "#1a2535", color: mode === "writing" ? "#CE82FF" : "#6b7a99", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✍️ Writing</button>
+        <button onClick={() => setMode("learn")} style={{ flex: 1, padding: "10px", borderRadius: 12, border: mode === "learn" ? "2px solid #FF9F00" : "2px solid #1e2d40", background: mode === "learn" ? "#FF9F0022" : "#1a2535", color: mode === "learn" ? "#FF9F00" : "#6b7a99", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>🧠 Learn</button>
+      </div>
+
+      <div style={{ padding: "0 16px 8px" }}>
+        <div style={{ background: "linear-gradient(135deg,#FF9F0022,#FF6B0011)", border: "2px solid #FF9F0066", borderRadius: 20, padding: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <div style={{ fontSize: 36 }}>🎯</div>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: "#FF9F00" }}>Full Practice Test</div>
+              <div style={{ fontSize: 12, color: "#6b7a99" }}>10 random questions · just like the real USCIS test</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["🔤","multiple","#58CC02","Choice"],["✍️","writing","#CE82FF","Write"],["🧠","learn","#FF9F00","Learn"]].map(([icon,tm,color,label]) => (
+              <button key={tm} onClick={() => startFullTest(tm)} style={{ flex: 1, padding: "11px 4px", borderRadius: 12, background: `${color}22`, color, fontSize: 12, fontWeight: 800, cursor: "pointer", border: `1.5px solid ${color}55` }}>{icon} {label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "8px 16px" }}>
+        {LESSONS.map((lesson) => {
+          const done = !!completedLessons[lesson.id];
+          return (
+            <button key={lesson.id} onClick={() => startLesson(lesson, mode)} style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 16, padding: 16, marginBottom: 10, borderRadius: 16,
+              border: done ? `2px solid ${lesson.color}66` : `2px solid ${lesson.color}44`,
+              background: done ? `linear-gradient(135deg, ${lesson.color}22, ${lesson.color}11)` : "#1a2535",
+              cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+            }}>
+              <div style={{ width: 52, height: 52, borderRadius: 14, background: `${lesson.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>{lesson.emoji}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 3 }}>{lesson.title}</div>
+                <div style={{ fontSize: 12, color: "#6b7a99" }}>{lesson.ids.length} questions · {lesson.ids.length * 10} XP</div>
+              </div>
+              {done && <div style={{ fontSize: 22 }}>✅</div>}
+              {!done && <div style={{ padding: "6px 14px", borderRadius: 20, background: lesson.color, fontSize: 12, fontWeight: 700, color: "#fff" }}>{mode === "writing" ? "✍️ WRITE" : mode === "learn" ? "🧠 LEARN" : "START"}</div>}
+            </button>
+          );
+        })}
+        {customQuestions.length > 0 && (
+          <button onClick={() => startLesson({ id: "custom", title: "My Custom Questions", emoji: "✏️", color: "#E91E63", custom: true, ids: customQuestions.map(q=>q.id) }, mode)} style={{
+            width: "100%", display: "flex", alignItems: "center", gap: 16, padding: 16, marginBottom: 10, borderRadius: 16,
+            border: "2px solid #E91E6344", background: "#1a2535", cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+          }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: "#E91E6333", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>✏️</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 3 }}>My Custom Questions</div>
+              <div style={{ fontSize: 12, color: "#6b7a99" }}>{customQuestions.length} question{customQuestions.length !== 1 ? "s" : ""}</div>
+            </div>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  /* ============================ MANAGE ============================ */
+  if (screen === "manage") {
+    const pool = allPool();
+    const filtered = answerFilter ? pool.filter(qq => qq.q.toLowerCase().includes(answerFilter.toLowerCase())) : pool;
+    return (
+      <div style={S.app}>
+        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => setScreen("home")} style={{ background: "transparent", border: "none", color: "#6b7a99", fontSize: 22, cursor: "pointer" }}>✕</button>
+          <div style={{ fontSize: 18, fontWeight: 800 }}>Manage</div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, padding: "0 16px 16px" }}>
+          {[["practice","🚩 Practice List"],["custom","✏️ My Questions"],["answers","📝 Edit Answers"]].map(([id,label]) => (
+            <button key={id} onClick={() => setManageTab(id)} style={{
+              flex: 1, padding: "10px 6px", borderRadius: 12, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              border: manageTab === id ? "2px solid #4A90D9" : "2px solid #1e2d40",
+              background: manageTab === id ? "#4A90D922" : "#1a2535",
+              color: manageTab === id ? "#4A90D9" : "#6b7a99",
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {manageTab === "practice" && (
+          <div style={{ padding: "0 16px" }}>
+            <p style={{ fontSize: 12, color: "#6b7a99", marginBottom: 14, lineHeight: 1.5 }}>
+              Questions you get wrong are automatically added here. Get them right once to clear them, or remove manually.
+            </p>
+            {practiceList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#4a5568" }}>
+                <img src="assets/mascot-thumbsup.png" alt="" style={{ width: 70, height: 70, objectFit: "contain", marginBottom: 6 }} />
+                <div style={{ fontSize: 13 }}>Nothing to practice — you're all caught up!</div>
+              </div>
+            ) : pool.filter(qq => practiceList.includes(qq.id)).map(qq => (
+              <div key={qq.id} style={{ background: "#1a2535", border: "1px solid #FF4B4B33", borderRadius: 12, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>{qq.q}</div>
+                  <div style={{ fontSize: 11, color: "#58CC02" }}>{preferredAnswers[qq.id] || qq.a}</div>
+                </div>
+                <button onClick={() => toggleStruggle(qq.id)} style={{ background: "none", border: "none", color: "#FF4B4B", fontSize: 13, cursor: "pointer", flexShrink: 0 }}>✕ Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {manageTab === "custom" && (
+          <div style={{ padding: "0 16px" }}>
+            <button onClick={() => setShowCustomForm(v => !v)} style={{ width: "100%", padding: 14, borderRadius: 14, border: "none", background: "linear-gradient(135deg,#E91E63,#ff6b95)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 14 }}>
+              {showCustomForm ? "Cancel" : "➕ Add Your Own Question"}
+            </button>
+            {showCustomForm && (
+              <div style={{ background: "#1a2535", border: "1.5px solid #E91E6344", borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <input placeholder="Question..." value={customDraft.q} onChange={e => setCustomDraft(d => ({ ...d, q: e.target.value }))} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1.5px solid #2a3a50", background: "#0f1923", color: "#fff", fontSize: 13, marginBottom: 10, outline: "none", boxSizing: "border-box" }} />
+                <input placeholder="Answer..." value={customDraft.a} onChange={e => setCustomDraft(d => ({ ...d, a: e.target.value }))} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1.5px solid #2a3a50", background: "#0f1923", color: "#fff", fontSize: 13, marginBottom: 14, outline: "none", boxSizing: "border-box" }} />
+                <button onClick={addCustomQuestion} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: "#E91E63", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Save Question</button>
+              </div>
+            )}
+            {customQuestions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "#4a5568", fontSize: 13 }}>No custom questions yet.</div>
+            ) : customQuestions.map(qq => (
+              <div key={qq.id} style={{ background: "#1a2535", border: "1px solid #2a3a50", borderRadius: 12, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>✏️ {qq.q}</div>
+                  <div style={{ fontSize: 11, color: "#58CC02" }}>{qq.a}</div>
+                </div>
+                <button onClick={() => deleteCustomQuestion(qq.id)} style={{ background: "none", border: "none", color: "#FF4B4B", fontSize: 15, cursor: "pointer", flexShrink: 0 }}>🗑️</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {manageTab === "answers" && (
+          <div style={{ padding: "0 16px" }}>
+            <p style={{ fontSize: 12, color: "#6b7a99", marginBottom: 12, lineHeight: 1.5 }}>
+              Change any official answer to a phrasing that's easier for you to remember.
+            </p>
+            <input placeholder="🔍 Search questions..." value={answerFilter} onChange={e => setAnswerFilter(e.target.value)} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1.5px solid #2a3a50", background: "#1a2535", color: "#fff", fontSize: 13, marginBottom: 14, outline: "none", boxSizing: "border-box" }} />
+            {filtered.slice(0, 40).map(qq => (
+              <div key={qq.id} style={{ background: "#1a2535", border: "1px solid #2a3a50", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>{qq.custom ? "✏️ " : ""}{qq.q}</div>
+                <div style={{ fontSize: 11, color: preferredAnswers[qq.id] ? "#58CC02" : "#6b7a99", fontStyle: preferredAnswers[qq.id] ? "normal" : "italic", marginBottom: 8 }}>
+                  {preferredAnswers[qq.id] ? `✓ ${preferredAnswers[qq.id]}` : qq.a}
+                </div>
+                <button onClick={() => { setEditingQ(qq); setEditDraft(preferredAnswers[qq.id] || ""); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #4A90D944", background: "#4A90D90d", color: "#4A90D9", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✎ Edit</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {editingQ && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", zIndex: 200 }} onClick={() => setEditingQ(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#1a2535", width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "20px 20px 0 0", padding: 20 }}>
+              <div style={{ width: 40, height: 4, background: "#2a3a50", borderRadius: 4, margin: "0 auto 16px" }} />
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{editingQ.q}</div>
+              <div style={{ fontSize: 11, color: "#6b7a99", marginBottom: 12 }}>Official: <em>{editingQ.a}</em></div>
+              <textarea value={editDraft} onChange={e => setEditDraft(e.target.value)} placeholder="Your preferred answer..." rows={3} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1.5px solid #2a3a50", background: "#0f1923", color: "#fff", fontSize: 13, outline: "none", resize: "none", marginBottom: 14, boxSizing: "border-box" }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { savePreferred(editingQ.id, ""); setEditingQ(null); }} style={{ flex: 1, padding: 13, borderRadius: 10, border: "1.5px solid #2a3a50", background: "transparent", color: "#6b7a99", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Reset</button>
+                <button onClick={() => { savePreferred(editingQ.id, editDraft); setEditingQ(null); }} style={{ flex: 1, padding: 13, borderRadius: 10, border: "none", background: "#4A90D9", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Save</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ============================ LESSON ============================ */
+  if (screen === "lesson" && q) {
+    const correctText = effAnswer(q);
+    return (
+      <div style={S.app}>
+        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => setScreen("home")} style={{ background: "transparent", border: "none", color: "#6b7a99", fontSize: 22, cursor: "pointer" }}>✕</button>
+          <div style={{ flex: 1, height: 8, background: "#1e2d40", borderRadius: 8 }}>
+            <div style={{ height: "100%", width: `${progress}%`, background: `linear-gradient(90deg, ${currentLesson.color}, ${currentLesson.color}cc)`, borderRadius: 8, transition: "width 0.4s ease" }} />
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {[1,2,3].map(h => (<span key={h} style={{ fontSize: 20, filter: h > hearts ? "grayscale(1) opacity(0.3)" : "none" }}>❤️</span>))}
+          </div>
+        </div>
+
+        {showXpPop && (<div style={{ position: "fixed", top: 70, right: 20, background: "#58CC02", color: "#fff", fontWeight: 800, fontSize: 16, padding: "8px 16px", borderRadius: 20, animation: "fadeUp 0.8s ease forwards", zIndex: 100 }}>+{mode === "writing" ? 15 : 10} XP ⚡</div>)}
+
+        <style>{`
+          @keyframes fadeUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-30px)} }
+          @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+        `}</style>
+
+        <div style={{ padding: "10px 20px 0" }}>
+          <div style={{ background: "#1a2535", borderRadius: 20, padding: "24px 20px", marginBottom: 20, border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `${currentLesson.color}22`, color: currentLesson.color, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                {currentLesson.emoji} {currentLesson.title}
+              </div>
+              <button onClick={() => toggleStruggle(q.id)} title="Mark as still learning" style={{
+                background: practiceList.includes(q.id) ? "#FF4B4B22" : "transparent",
+                border: `1.5px solid ${practiceList.includes(q.id) ? "#FF4B4B" : "#2a3a50"}`,
+                color: practiceList.includes(q.id) ? "#FF4B4B" : "#6b7a99",
+                borderRadius: 10, padding: "5px 9px", fontSize: 13, cursor: "pointer",
+              }}>🚩</button>
+            </div>
+            <p style={{ fontSize: 11, color: "#6b7a99", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.1em" }}>Q{typeof q.id === "number" ? q.id : "?"}</p>
+            <p style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, margin: 0, color: "#e8f0fe" }}>{q.q}</p>
+          </div>
+
+          {mode === "multiple" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {options.map((opt, i) => {
+                const isSelected = selected === opt;
+                const isCorrect = opt === correctText;
+                let bg = "#1a2535", border = "2px solid #1e2d40", color = "#c8d6f0";
+                if (feedback) {
+                  if (isCorrect) { bg = "#1a3a1a"; border = "2px solid #58CC02"; color = "#58CC02"; }
+                  else if (isSelected) { bg = "#3a1a1a"; border = "2px solid #FF4B4B"; color = "#FF4B4B"; }
+                } else if (isSelected) { border = `2px solid ${currentLesson.color}`; color = currentLesson.color; }
+                return (
+                  <button key={i} onClick={() => handleSelect(opt)} style={{ padding: "16px 18px", borderRadius: 14, border, background: bg, color, fontSize: 15, fontWeight: 600, textAlign: "left", cursor: feedback ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12, animation: feedback && isSelected && !isCorrect ? "shake 0.5s ease" : "none" }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0, background: feedback ? (isCorrect ? "#58CC0233" : isSelected ? "#FF4B4B33" : "transparent") : "#0f1923", border: feedback ? `1.5px solid ${isCorrect ? "#58CC02" : isSelected ? "#FF4B4B" : "#1e2d40"}` : "1.5px solid #2a3a50", color: feedback ? (isCorrect ? "#58CC02" : isSelected ? "#FF4B4B" : "#4a5568") : "#4a5568" }}>
+                      {feedback ? (isCorrect ? "✓" : isSelected ? "✗" : String.fromCharCode(65+i)) : String.fromCharCode(65+i)}
+                    </span>
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {mode === "writing" && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <img src="assets/mascot-writing.png" alt="" style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }} />
+                <div style={{ fontSize: 12, color: "#6b7a99", lineHeight: 1.6 }}>Type your answer — key words are enough, doesn't need to be exact.</div>
+              </div>
+              <textarea value={typedAnswer} onChange={e => !writingResult && setTypedAnswer(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleWritingSubmit(); }}} placeholder="Type your answer here..." rows={3} style={{ width: "100%", padding: 16, borderRadius: 14, fontSize: 16, border: writingResult ? `2px solid ${writingResult === "correct" ? "#58CC02" : "#FF4B4B"}` : `2px solid ${currentLesson.color}66`, background: writingResult ? (writingResult === "correct" ? "#1a3a1a" : "#3a1a1a") : "#1a2535", color: writingResult ? (writingResult === "correct" ? "#58CC02" : "#FF4B4B") : "#e8f0fe", resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit", animation: writingResult === "wrong" ? "shake 0.5s ease" : "none" }} />
+              {!writingResult && (
+                <button onClick={handleWritingSubmit} disabled={!typedAnswer.trim()} style={{ width: "100%", marginTop: 12, padding: 16, borderRadius: 16, border: "none", background: typedAnswer.trim() ? `linear-gradient(135deg, ${currentLesson.color}, ${currentLesson.color}aa)` : "#1e2d40", color: typedAnswer.trim() ? "#fff" : "#4a5568", fontSize: 16, fontWeight: 800, cursor: typedAnswer.trim() ? "pointer" : "not-allowed", fontFamily: "inherit" }}>Check Answer ✓</button>
+              )}
+            </div>
+          )}
+
+          {feedback && (
+            <div style={{ marginTop: 20, padding: "16px 20px", borderRadius: 16, background: feedback === "correct" ? "#1a3a1a" : "#3a1a1a", border: `1px solid ${feedback === "correct" ? "#58CC02" : "#FF4B4B"}44` }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: feedback === "correct" ? "#58CC02" : "#FF4B4B", marginBottom: feedback === "wrong" ? 4 : 0 }}>{feedback === "correct" ? "✓ Correct!" : "✗ Incorrect"}</div>
+              {feedback === "wrong" && (<div style={{ fontSize: 13, color: "#a0b0c8" }}>Answer: <strong style={{ color: "#58CC02" }}>{correctText}</strong></div>)}
+            </div>
+          )}
+
+          {feedback && (
+            <button onClick={nextQuestion} style={{ width: "100%", marginTop: 14, padding: 16, borderRadius: 16, border: "none", background: feedback === "correct" ? "linear-gradient(135deg,#58CC02,#89E219)" : "linear-gradient(135deg,#FF4B4B,#ff7070)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+              {qIndex + 1 >= questions.length || hearts <= 0 ? "See Results →" : "Continue →"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ============================ LEARN MODE ============================ */
+  if (screen === "learn") {
+    const learnQ = questions[learnIndex];
+    const learnData = learnQ ? LEARN[learnQ.id] : null;
+    const displayAnswer = learnQ ? effAnswer(learnQ) : "";
+    const highlighted = learnQ && learnData ? highlightAnswer(displayAnswer, learnData.core) : (learnQ ? [{ text: displayAnswer, hl: false }] : []);
+    const totalCards = questions.length;
+
+    if (learnDone) return (
+      <div style={{ ...S.app, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "40px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>🧠</div>
+        <h2 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 8px" }}>All cards reviewed!</h2>
+        <p style={{ color: "#6b7a99", fontSize: 13, marginBottom: 32 }}>Ready to test yourself?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+          <button onClick={() => { setMode("multiple"); resetSession(); setQIndex(0); setScreen("lesson"); }} style={{ padding: 16, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#4A90D9,#357ABD)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>🔤 Quiz — Multiple Choice</button>
+          <button onClick={() => { setMode("writing"); resetSession(); setQIndex(0); setScreen("lesson"); }} style={{ padding: 16, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#CE82FF,#9B59B6)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>✍️ Quiz — Writing Mode</button>
+          <button onClick={() => setScreen("home")} style={{ padding: 14, borderRadius: 16, border: "2px solid #1e2d40", background: "transparent", color: "#6b7a99", fontSize: 14, cursor: "pointer" }}>← Back to Home</button>
+        </div>
+      </div>
+    );
+
+    return (
+      <div style={S.app}>
+        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => setScreen("home")} style={{ background: "transparent", border: "none", color: "#6b7a99", fontSize: 22, cursor: "pointer" }}>✕</button>
+          <div style={{ flex: 1, display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {questions.map((_, i) => (<div key={i} style={{ width: i === learnIndex ? 18 : 8, height: 8, borderRadius: 4, background: learnKnown.has(questions[i]?.id) ? "#58CC02" : i === learnIndex ? (currentLesson?.color || "#FF9F00") : "#1e2d40", transition: "all 0.3s" }} />))}
+          </div>
+          <div style={{ fontSize: 13, color: "#6b7a99", fontWeight: 700 }}>{learnIndex+1}/{totalCards}</div>
+        </div>
+
+        <style>{`@keyframes slideIn{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}`}</style>
+
+        <div style={{ padding: "8px 20px 0" }}>
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: currentLesson?.color || "#FF9F00", background: `${currentLesson?.color || "#FF9F00"}22`, padding: "4px 14px", borderRadius: 20, fontWeight: 700 }}>{currentLesson?.emoji} {currentLesson?.title}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button onClick={() => toggleStruggle(learnQ.id)} style={{ background: practiceList.includes(learnQ.id) ? "#FF4B4B22" : "transparent", border: `1.5px solid ${practiceList.includes(learnQ.id) ? "#FF4B4B" : "#2a3a50"}`, color: practiceList.includes(learnQ.id) ? "#FF4B4B" : "#6b7a99", borderRadius: 10, padding: "5px 9px", fontSize: 13, cursor: "pointer" }}>🚩 Still learning</button>
+          </div>
+          <div style={{ background: "#1a2535", borderRadius: 20, padding: "24px 20px", marginBottom: 16, border: `1px solid ${currentLesson?.color || "#FF9F00"}44` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <img src="assets/mascot-book.png" alt="" style={{ width: 26, height: 26, objectFit: "contain" }} />
+              <p style={{ fontSize: 11, color: "#6b7a99", margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>Learn</p>
+            </div>
+            <p style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.55, margin: 0, color: "#e8f0fe" }}>{learnQ?.q}</p>
+          </div>
+
+          {!learnRevealed ? (
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <p style={{ fontSize: 13, color: "#6b7a99", fontStyle: "italic", marginBottom: 16 }}>Think about it… then reveal the answer 👇</p>
+              <button onClick={() => setLearnRevealed(true)} style={{ width: "100%", padding: 16, borderRadius: 16, border: "none", background: `linear-gradient(135deg, ${currentLesson?.color || "#FF9F00"}, ${currentLesson?.color || "#FF9F00"}aa)`, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Reveal Answer ✨</button>
+            </div>
+          ) : (
+            <div style={{ animation: "slideIn 0.3s ease" }}>
+              <div style={{ background: "#1a2e1a", border: "1px solid #58CC0244", borderRadius: 16, padding: 20, marginBottom: 14 }}>
+                <p style={{ fontSize: 11, color: "#58CC02", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>✓ Answer</p>
+                <p style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.6, margin: "0 0 14px" }}>
+                  {highlighted.map((part, i) => part.hl
+                    ? <span key={i} style={{ background: "#FF9F0033", color: "#FF9F00", borderRadius: 6, padding: "1px 4px", border: "1px solid #FF9F0055", fontWeight: 900 }}>{part.text}</span>
+                    : <span key={i} style={{ color: "#c0f0d8" }}>{part.text}</span>)}
+                </p>
+                {learnData && (
+                  <div style={{ marginBottom: 12 }}>
+                    <p style={{ fontSize: 11, color: "#6b7a99", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.08em" }}>🔑 Core words:</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {learnData.core.map((w, i) => (<span key={i} style={{ background: "#FF9F0022", color: "#FF9F00", border: "1px solid #FF9F0044", borderRadius: 8, padding: "3px 10px", fontSize: 13, fontWeight: 700 }}>{w}</span>))}
+                    </div>
+                  </div>
+                )}
+                {learnData?.tip && (<div style={{ background: "#0f1923", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.06)" }}><span style={{ fontSize: 12, color: "#CE82FF", fontWeight: 700 }}>💡 Tip: </span><span style={{ fontSize: 13, color: "#a0b8d0", lineHeight: 1.5 }}>{learnData.tip}</span></div>)}
+              </div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                <button onClick={() => { if (learnIndex+1 >= questions.length) setLearnDone(true); else { setLearnIndex(i=>i+1); setLearnRevealed(false); } }} style={{ flex: 1, padding: 14, borderRadius: 14, border: "2px solid #FF4B4B44", background: "#3a1a1a", color: "#FF4B4B", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>🔁 Still learning</button>
+                <button onClick={() => { setLearnKnown(prev => new Set([...prev, learnQ.id])); if (learnIndex+1 >= questions.length) setLearnDone(true); else { setLearnIndex(i=>i+1); setLearnRevealed(false); } }} style={{ flex: 1, padding: 14, borderRadius: 14, border: "2px solid #58CC0244", background: "#1a3a1a", color: "#58CC02", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>✓ Got it!</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ============================ RESULT ============================ */
+  if (screen === "result") {
+    const passed = finalCorrect >= Math.ceil(questions.length * 0.6);
+    return (
+      <div style={{ ...S.app, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "40px 24px", textAlign: "center" }}>
+        {passed
+          ? <img src="assets/mascot-trophy.png" alt="" style={{ width: 130, height: 130, objectFit: "contain", marginBottom: 8 }} />
+          : <div style={{ fontSize: 72, marginBottom: 16 }}>💪</div>}
+        <h2 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px" }}>{passed ? "Lesson Complete!" : "Keep Practicing!"}</h2>
+        <p style={{ color: "#6b7a99", fontSize: 15, marginBottom: 32 }}>{passed ? `You passed ${currentLesson.title}!` : "You need 60% to pass."}</p>
+        <div style={{ display: "flex", gap: 20, marginBottom: 36, width: "100%", justifyContent: "center" }}>
+          <div style={{ background: "#1a2535", borderRadius: 16, padding: "20px 24px", flex: 1, maxWidth: 120 }}><div style={{ fontSize: 28, fontWeight: 900, color: "#58CC02" }}>{finalCorrect}</div><div style={{ fontSize: 12, color: "#6b7a99" }}>Correct</div></div>
+          <div style={{ background: "#1a2535", borderRadius: 16, padding: "20px 24px", flex: 1, maxWidth: 120 }}><div style={{ fontSize: 28, fontWeight: 900, color: "#FF9F00" }}>+{xpEarned}</div><div style={{ fontSize: 12, color: "#6b7a99" }}>XP Earned</div></div>
+          <div style={{ background: "#1a2535", borderRadius: 16, padding: "20px 24px", flex: 1, maxWidth: 120 }}><div style={{ fontSize: 28, fontWeight: 900, color: "#FF4B4B" }}>{questions.length - finalCorrect}</div><div style={{ fontSize: 12, color: "#6b7a99" }}>Missed</div></div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+          {passed ? (
+            <button onClick={() => setScreen("home")} style={{ padding: 16, borderRadius: 16, border: "none", background: "linear-gradient(135deg,#58CC02,#89E219)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Back to Lessons 🏠</button>
+          ) : (
+            <button onClick={() => startLesson(currentLesson, mode)} style={{ padding: 16, borderRadius: 16, border: "none", background: `linear-gradient(135deg, ${currentLesson.color}, ${currentLesson.color}aa)`, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Try Again 🔄</button>
+          )}
+          <button onClick={() => setScreen("home")} style={{ padding: 14, borderRadius: 16, border: "2px solid #1e2d40", background: "transparent", color: "#6b7a99", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>{passed ? "Next Lesson →" : "Back to Home"}</button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ============================ TEST RESULT ============================ */
+  if (screen === "testresult") {
+    const totalCorrect = testResults.filter(r => r.correct).length;
+    const passed = totalCorrect >= 6;
+    const xpBonus = passed ? 50 : 20;
+    return (
+      <div style={{ ...S.app, padding: "0 0 60px" }}>
+        <div style={{ background: passed ? "linear-gradient(135deg,#1a3a1a,#0f2a0f)" : "linear-gradient(135deg,#3a1a1a,#2a0f0f)", padding: "36px 24px 28px", textAlign: "center", borderBottom: `3px solid ${passed ? "#58CC02" : "#FF4B4B"}44` }}>
+          {passed
+            ? <img src="assets/mascot-trophy.png" alt="" style={{ width: 110, height: 110, objectFit: "contain", marginBottom: 6 }} />
+            : <div style={{ fontSize: 64, marginBottom: 12 }}>💪</div>}
+          <h2 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 6px", color: passed ? "#58CC02" : "#FF4B4B" }}>{passed ? "YOU PASSED!" : "NOT QUITE YET"}</h2>
+          <p style={{ color: "#6b7a99", fontSize: 14, marginBottom: 20 }}>{passed ? "Great job! You would pass the real USCIS civics test." : `You need 6/10 to pass. You got ${totalCorrect}/10.`}</p>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 100, height: 100, borderRadius: "50%", border: `5px solid ${passed ? "#58CC02" : "#FF4B4B"}`, background: passed ? "#58CC0218" : "#FF4B4B18", marginBottom: 20 }}>
+            <div><div style={{ fontSize: 32, fontWeight: 900, color: passed ? "#58CC02" : "#FF4B4B" }}>{totalCorrect}</div><div style={{ fontSize: 13, color: "#6b7a99" }}>/ 10</div></div>
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <div style={{ background: "#58CC0222", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#58CC02" }}>{totalCorrect}</div><div style={{ fontSize: 11, color: "#6b7a99" }}>Correct</div></div>
+            <div style={{ background: "#FF4B4B22", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#FF4B4B" }}>{10-totalCorrect}</div><div style={{ fontSize: 11, color: "#6b7a99" }}>Missed</div></div>
+            <div style={{ background: "#FF9F0022", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#FF9F00" }}>+{xpBonus}</div><div style={{ fontSize: 11, color: "#6b7a99" }}>XP Bonus</div></div>
+          </div>
+        </div>
+        <div style={{ padding: "20px 16px 0" }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: "#6b7a99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>📋 Question Review</p>
+          {testResults.map((r, i) => {
+            const isOfficial = OFFICIAL_IDS.includes(r.q.id);
+            return (
+              <div key={i} style={{ background: r.correct ? "#1a3a1a" : "#2a1a1a", border: `1px solid ${r.correct ? "#58CC0244" : "#FF4B4B44"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{r.correct ? "✅" : "❌"}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: "#6b7a99" }}>Q{typeof r.q.id === "number" ? r.q.id : "custom"}</span>
+                      {isOfficial && (<span style={{ fontSize: 10, fontWeight: 700, color: "#FF9F00", background: "#FF9F0022", padding: "1px 6px", borderRadius: 6 }}>⭐ OFFICIAL</span>)}
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#c8d6f0", margin: "0 0 6px", lineHeight: 1.4 }}>{r.q.q}</p>
+                    {!r.correct ? (<div><p style={{ fontSize: 12, color: "#FF4B4B", margin: "0 0 3px" }}>Your answer: <span style={{ fontStyle: "italic" }}>{r.userAnswer || "—"}</span></p><p style={{ fontSize: 12, color: "#58CC02", margin: 0 }}>Correct: <strong>{effAnswer(r.q)}</strong></p></div>) : (<p style={{ fontSize: 12, color: "#58CC02", margin: 0 }}>✓ {effAnswer(r.q)}</p>)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ padding: "20px 16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
+          {[["🔤","multiple","#58CC02","Choice"],["✍️","writing","#CE82FF","Writing"],["🧠","learn","#FF9F00","Learn"]].map(([icon,tm,color,label]) => (
+            <button key={tm} onClick={() => startFullTest(tm)} style={{ padding: 13, borderRadius: 14, background: `${color}22`, color, fontSize: 13, fontWeight: 800, cursor: "pointer", border: `1.5px solid ${color}44` }}>{icon} New Test — {label} Mode</button>
+          ))}
+          <button onClick={() => setScreen("home")} style={{ padding: 13, borderRadius: 14, border: "2px solid #1e2d40", background: "transparent", color: "#6b7a99", fontSize: 14, cursor: "pointer" }}>← Back to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+
+</script>
+
+<script>
+  (function () {
+    try {
+      var code = document.getElementById("app-source").textContent;
+      var output = Babel.transform(code, {
+        presets: [["react", { runtime: "classic" }]],
+        filename: "app.jsx",
+      }).code;
+      var script = document.createElement("script");
+      script.text = output;
+      document.body.appendChild(script);
+    } catch (err) {
+      document.getElementById("root").innerHTML =
+        '<div style="padding:24px;color:#FF4B4B;font-family:sans-serif;font-size:13px;white-space:pre-wrap;">' +
+        'Failed to load app:\n\n' + (err && err.message ? err.message : String(err)) +
+        '</div>';
+      console.error("App load error:", err);
+    }
+  })();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>
