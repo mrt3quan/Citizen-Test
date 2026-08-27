@@ -1231,6 +1231,13 @@ function App() {
       completedLessons100, completedLessons128, preferredAnswers100, preferredAnswers128, practiceList100, practiceList128,
       customQuestions100, customQuestions128]);
 
+  // Keeps the mobile browser/PWA chrome color matching the in-app theme
+  // instead of always showing the dark app color behind a light UI.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "light" ? "#F3F5F9" : "#0f1923");
+  }, [theme]);
+
   // ── Active-version aliases — the rest of the app just uses these names ────
   const allQuestions = testVersion === "128" ? allQuestions128 : allQuestions100;
   const LESSONS = testVersion === "128" ? LESSONS128 : LESSONS100;
@@ -1481,10 +1488,12 @@ function App() {
   // not the app background, so white text stays correct in both themes.
   const T = theme === "light" ? {
     bg: "#F3F5F9", card: "#FFFFFF", text: "#111827", textSub: "#5B6B85",
-    border: "rgba(15,25,40,0.09)", input: "#F0F2F6", shadowSm: "0 2px 8px rgba(15,25,40,0.08)", track: "#E4E8F0",
+    border: "rgba(15,25,40,0.08)", input: "#F0F2F6", shadowSm: "0 2px 8px rgba(15,25,40,0.07)", shadow: "0 12px 30px rgba(15,25,40,0.10)", track: "#E4E8F0",
+    successBg: "#E9F7EE", successBg2: "#DCF3E4", errorBg: "#FDECEC", errorBg2: "#FBDCDC", warningBg: "#FCF2D9",
   } : {
     bg: "#0f1923", card: "#1a2535", text: "#fff", textSub: "#6b7a99",
-    border: "rgba(255,255,255,0.06)", input: "#0f1923", shadowSm: R.shadowSm, track: "#1e2d40",
+    border: "rgba(255,255,255,0.06)", input: "#0f1923", shadowSm: R.shadowSm, shadow: R.shadow, track: "#1e2d40",
+    successBg: "#1a3a1a", successBg2: "#0f2a0f", errorBg: "#3a1a1a", errorBg2: "#2a0f0f", warningBg: "#3a2a0a",
   };
   const S = { app: { minHeight: "100vh", background: T.bg, fontFamily: "'Inter','Helvetica Neue',sans-serif", color: T.text, maxWidth: 480, margin: "0 auto", padding: "0 0 40px", position: "relative" } };
 
@@ -1500,7 +1509,7 @@ function App() {
 
         <button onClick={() => { setTestVersion("100"); setOnboardingStage("state"); }} style={{
           width: "100%", textAlign: "left", background: T.card, border: "1.5px solid #4A90D955",
-          borderRadius: 20, padding: 20, marginBottom: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: R.shadow,
+          borderRadius: 20, padding: 20, marginBottom: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: T.shadow,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 50, height: 50, borderRadius: 14, background: "#4A90D922", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📘</div>
@@ -1514,7 +1523,7 @@ function App() {
 
         <button onClick={() => { setTestVersion("128"); setOnboardingStage("state"); }} style={{
           width: "100%", textAlign: "left", background: T.card, border: "1.5px solid #B2223455",
-          borderRadius: 20, padding: 20, marginBottom: 20, cursor: "pointer", fontFamily: "inherit", boxShadow: R.shadow,
+          borderRadius: 20, padding: 20, marginBottom: 20, cursor: "pointer", fontFamily: "inherit", boxShadow: T.shadow,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 50, height: 50, borderRadius: 14, background: "#B2223422", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📗</div>
@@ -1677,7 +1686,7 @@ function App() {
         <button onClick={() => startFullTest(mode)} style={{
           width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left",
           background: "linear-gradient(135deg,#1d2c4d,#16213a)", border: "1.5px solid #4A90D944",
-          borderRadius: 20, padding: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: R.shadow,
+          borderRadius: 20, padding: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: T.shadow,
         }}>
           <img src="mascot-trophy.png" alt="" style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
@@ -1941,7 +1950,7 @@ function App() {
               </div>
             )}
 
-            <div style={{ background: "#3a2a0a", border: "1px solid #C9A22744", borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 11, color: "#C9A227", lineHeight: 1.5 }}>
+            <div style={{ background: T.warningBg, border: "1px solid #C9A22744", borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 11, color: theme === "light" ? "#8a6d1a" : "#C9A227", lineHeight: 1.5 }}>
               ⚠️ Officials can change with elections or appointments — please verify before your interview.
             </div>
 
@@ -2151,7 +2160,7 @@ function App() {
         `}</style>
 
         <div style={{ padding: "10px 20px 0" }}>
-          <div style={{ background: T.card, borderRadius: 22, padding: "24px 20px", marginBottom: 20, border: `1px solid ${T.border}`, boxShadow: R.shadow }}>
+          <div style={{ background: T.card, borderRadius: 22, padding: "24px 20px", marginBottom: 20, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `${currentLesson.color}22`, color: currentLesson.color, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 {currentLesson.emoji} {currentLesson.title}
@@ -2174,8 +2183,8 @@ function App() {
                 const isCorrect = opt === correctText;
                 let bg = T.card, border = `2px solid ${T.track}`, color = T.text;
                 if (feedback) {
-                  if (isCorrect) { bg = "#1a3a1a"; border = "2px solid #2E7D46"; color = "#2E7D46"; }
-                  else if (isSelected) { bg = "#3a1a1a"; border = "2px solid #B22234"; color = "#B22234"; }
+                  if (isCorrect) { bg = T.successBg; border = "2px solid #2E7D46"; color = "#2E7D46"; }
+                  else if (isSelected) { bg = T.errorBg; border = "2px solid #B22234"; color = "#B22234"; }
                 } else if (isSelected) { border = `2px solid ${currentLesson.color}`; color = currentLesson.color; }
                 return (
                   <button key={i} onClick={() => handleSelect(opt)} style={{ padding: "16px 18px", borderRadius: 14, border, background: bg, color, fontSize: 15, fontWeight: 600, textAlign: "left", cursor: feedback ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12, animation: feedback && isSelected && !isCorrect ? "shake 0.5s ease" : "none" }}>
@@ -2195,7 +2204,7 @@ function App() {
                 <img src="mascot-writing.png" alt="" style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }} />
                 <div style={{ fontSize: 12, color: T.textSub, lineHeight: 1.6 }}>Type your answer — key words are enough, doesn't need to be exact.</div>
               </div>
-              <textarea value={typedAnswer} onChange={e => !writingResult && setTypedAnswer(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleWritingSubmit(); }}} placeholder="Type your answer here..." rows={3} style={{ width: "100%", padding: 16, borderRadius: 14, fontSize: 16, border: writingResult ? `2px solid ${writingResult === "correct" ? "#2E7D46" : "#B22234"}` : `2px solid ${currentLesson.color}66`, background: writingResult ? (writingResult === "correct" ? "#1a3a1a" : "#3a1a1a") : T.card, color: writingResult ? (writingResult === "correct" ? "#2E7D46" : "#B22234") : T.text, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit", animation: writingResult === "wrong" ? "shake 0.5s ease" : "none" }} />
+              <textarea value={typedAnswer} onChange={e => !writingResult && setTypedAnswer(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleWritingSubmit(); }}} placeholder="Type your answer here..." rows={3} style={{ width: "100%", padding: 16, borderRadius: 14, fontSize: 16, border: writingResult ? `2px solid ${writingResult === "correct" ? "#2E7D46" : "#B22234"}` : `2px solid ${currentLesson.color}66`, background: writingResult ? (writingResult === "correct" ? T.successBg : T.errorBg) : T.card, color: writingResult ? (writingResult === "correct" ? "#2E7D46" : "#B22234") : T.text, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit", animation: writingResult === "wrong" ? "shake 0.5s ease" : "none" }} />
               {!writingResult && (
                 <button onClick={handleWritingSubmit} disabled={!typedAnswer.trim()} style={{ width: "100%", marginTop: 12, padding: 16, borderRadius: R.pill, border: "none", background: typedAnswer.trim() ? `linear-gradient(135deg, ${currentLesson.color}, ${currentLesson.color}aa)` : T.track, color: typedAnswer.trim() ? "#fff" : "#4a5568", fontSize: 16, fontWeight: 800, cursor: typedAnswer.trim() ? "pointer" : "not-allowed", fontFamily: "inherit", boxShadow: typedAnswer.trim() ? `0 6px 18px ${currentLesson.color}55` : "none", transition: "all 0.2s" }}>Check Answer ✓</button>
               )}
@@ -2203,7 +2212,7 @@ function App() {
           )}
 
           {feedback && (
-            <div style={{ marginTop: 20, padding: "16px 20px", borderRadius: 16, background: feedback === "correct" ? "#1a3a1a" : "#3a1a1a", border: `1px solid ${feedback === "correct" ? "#2E7D46" : "#B22234"}44` }}>
+            <div style={{ marginTop: 20, padding: "16px 20px", borderRadius: 16, background: feedback === "correct" ? T.successBg : T.errorBg, border: `1px solid ${feedback === "correct" ? "#2E7D46" : "#B22234"}44` }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: feedback === "correct" ? "#2E7D46" : "#B22234", marginBottom: feedback === "wrong" ? 4 : 0 }}>{feedback === "correct" ? "✓ Correct!" : "✗ Incorrect"}</div>
               {feedback === "wrong" && (<div style={{ fontSize: 13, color: T.textSub }}>Answer: <strong style={{ color: "#2E7D46" }}>{correctText}</strong></div>)}
             </div>
@@ -2259,7 +2268,7 @@ function App() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
             <button onClick={() => toggleStruggle(learnQ.id)} style={{ background: practiceList.includes(learnQ.id) ? "#B2223422" : "transparent", border: `1.5px solid ${practiceList.includes(learnQ.id) ? "#B22234" : T.track}`, color: practiceList.includes(learnQ.id) ? "#B22234" : T.textSub, borderRadius: 10, padding: "5px 9px", fontSize: 13, cursor: "pointer" }}>🚩 Still learning</button>
           </div>
-          <div style={{ background: T.card, borderRadius: 22, padding: "24px 20px", marginBottom: 16, border: `1px solid ${currentLesson?.color || "#C9A227"}44`, boxShadow: R.shadow }}>
+          <div style={{ background: T.card, borderRadius: 22, padding: "24px 20px", marginBottom: 16, border: `1px solid ${currentLesson?.color || "#C9A227"}44`, boxShadow: T.shadow }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <img src="mascot-book.png" alt="" style={{ width: 26, height: 26, objectFit: "contain" }} />
               <p style={{ fontSize: 11, color: T.textSub, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>Learn</p>
@@ -2274,12 +2283,12 @@ function App() {
             </div>
           ) : (
             <div style={{ animation: "slideIn 0.3s ease" }}>
-              <div style={{ background: "#1a2e1a", border: "1px solid #2E7D4644", borderRadius: 16, padding: 20, marginBottom: 14 }}>
+              <div style={{ background: T.successBg, border: "1px solid #2E7D4644", borderRadius: 16, padding: 20, marginBottom: 14 }}>
                 <p style={{ fontSize: 11, color: "#2E7D46", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>✓ Answer</p>
                 <p style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.6, margin: "0 0 14px" }}>
                   {highlighted.map((part, i) => part.hl
-                    ? <span key={i} style={{ background: "#C9A22733", color: "#C9A227", borderRadius: 6, padding: "1px 4px", border: "1px solid #C9A22755", fontWeight: 900 }}>{part.text}</span>
-                    : <span key={i} style={{ color: "#c0f0d8" }}>{part.text}</span>)}
+                    ? <span key={i} style={{ background: "#C9A22733", color: theme === "light" ? "#8a6d1a" : "#C9A227", borderRadius: 6, padding: "1px 4px", border: "1px solid #C9A22755", fontWeight: 900 }}>{part.text}</span>
+                    : <span key={i} style={{ color: theme === "light" ? "#1b5e3a" : "#c0f0d8" }}>{part.text}</span>)}
                 </p>
                 {learnData && (
                   <div style={{ marginBottom: 12 }}>
@@ -2289,11 +2298,11 @@ function App() {
                     </div>
                   </div>
                 )}
-                {learnData?.tip && (<div style={{ background: T.input, borderRadius: 12, padding: "12px 14px", border: `1px solid ${T.border}` }}><span style={{ fontSize: 12, color: "#4A90D9", fontWeight: 700 }}>💡 Tip: </span><span style={{ fontSize: 13, color: "#a0b8d0", lineHeight: 1.5 }}>{learnData.tip}</span></div>)}
+                {learnData?.tip && (<div style={{ background: T.input, borderRadius: 12, padding: "12px 14px", border: `1px solid ${T.border}` }}><span style={{ fontSize: 12, color: "#4A90D9", fontWeight: 700 }}>💡 Tip: </span><span style={{ fontSize: 13, color: T.textSub, lineHeight: 1.5 }}>{learnData.tip}</span></div>)}
               </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                <button onClick={() => { if (learnIndex+1 >= questions.length) setLearnDone(true); else { setLearnIndex(i=>i+1); setLearnRevealed(false); } }} style={{ flex: 1, padding: 14, borderRadius: 14, border: "2px solid #B2223444", background: "#3a1a1a", color: "#B22234", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>🔁 Still learning</button>
-                <button onClick={() => { setLearnKnown(prev => new Set([...prev, learnQ.id])); if (learnIndex+1 >= questions.length) setLearnDone(true); else { setLearnIndex(i=>i+1); setLearnRevealed(false); } }} style={{ flex: 1, padding: 14, borderRadius: 14, border: "2px solid #2E7D4644", background: "#1a3a1a", color: "#2E7D46", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>✓ Got it!</button>
+                <button onClick={() => { if (learnIndex+1 >= questions.length) setLearnDone(true); else { setLearnIndex(i=>i+1); setLearnRevealed(false); } }} style={{ flex: 1, padding: 14, borderRadius: 14, border: "2px solid #B2223444", background: T.errorBg, color: "#B22234", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>🔁 Still learning</button>
+                <button onClick={() => { setLearnKnown(prev => new Set([...prev, learnQ.id])); if (learnIndex+1 >= questions.length) setLearnDone(true); else { setLearnIndex(i=>i+1); setLearnRevealed(false); } }} style={{ flex: 1, padding: 14, borderRadius: 14, border: "2px solid #2E7D4644", background: T.successBg, color: "#2E7D46", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>✓ Got it!</button>
               </div>
             </div>
           )}
@@ -2336,19 +2345,19 @@ function App() {
     const xpBonus = passed ? 50 : 20;
     return (
       <div style={{ ...S.app, padding: "0 0 60px" }}>
-        <div style={{ background: passed ? "linear-gradient(135deg,#1a3a1a,#0f2a0f)" : "linear-gradient(135deg,#3a1a1a,#2a0f0f)", padding: "36px 24px 28px", textAlign: "center", borderBottom: `3px solid ${passed ? "#2E7D46" : "#B22234"}44` }}>
+        <div style={{ background: passed ? `linear-gradient(135deg, ${T.successBg}, ${T.successBg2})` : `linear-gradient(135deg, ${T.errorBg}, ${T.errorBg2})`, padding: "36px 24px 28px", textAlign: "center", borderBottom: `3px solid ${passed ? "#2E7D46" : "#B22234"}44` }}>
           {passed
             ? <img src="mascot-trophy.png" alt="" style={{ width: 110, height: 110, objectFit: "contain", marginBottom: 6 }} />
             : <div style={{ fontSize: 64, marginBottom: 12 }}>💪</div>}
           <h2 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 6px", color: passed ? "#2E7D46" : "#B22234" }}>{passed ? "YOU PASSED!" : "NOT QUITE YET"}</h2>
-          <p style={{ color: "#9db0d4", fontSize: 14, marginBottom: 20 }}>{passed ? "Great job! You would pass the real USCIS civics test." : `You need ${FULL_TEST_PASS}/${FULL_TEST_SIZE} to pass. You got ${totalCorrect}/${FULL_TEST_SIZE}.`}</p>
+          <p style={{ color: T.textSub, fontSize: 14, marginBottom: 20 }}>{passed ? "Great job! You would pass the real USCIS civics test." : `You need ${FULL_TEST_PASS}/${FULL_TEST_SIZE} to pass. You got ${totalCorrect}/${FULL_TEST_SIZE}.`}</p>
           <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 100, height: 100, borderRadius: "50%", border: `5px solid ${passed ? "#2E7D46" : "#B22234"}`, background: passed ? "#2E7D4618" : "#B2223418", marginBottom: 20 }}>
-            <div><div style={{ fontSize: 32, fontWeight: 900, color: passed ? "#2E7D46" : "#B22234" }}>{totalCorrect}</div><div style={{ fontSize: 13, color: "#9db0d4" }}>/ {FULL_TEST_SIZE}</div></div>
+            <div><div style={{ fontSize: 32, fontWeight: 900, color: passed ? "#2E7D46" : "#B22234" }}>{totalCorrect}</div><div style={{ fontSize: 13, color: T.textSub }}>/ {FULL_TEST_SIZE}</div></div>
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-            <div style={{ background: "#2E7D4622", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#2E7D46" }}>{totalCorrect}</div><div style={{ fontSize: 11, color: "#9db0d4" }}>Correct</div></div>
-            <div style={{ background: "#B2223422", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#B22234" }}>{FULL_TEST_SIZE-totalCorrect}</div><div style={{ fontSize: 11, color: "#9db0d4" }}>Missed</div></div>
-            <div style={{ background: "#C9A22722", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#C9A227" }}>+{xpBonus}</div><div style={{ fontSize: 11, color: "#9db0d4" }}>XP Bonus</div></div>
+            <div style={{ background: "#2E7D4622", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#2E7D46" }}>{totalCorrect}</div><div style={{ fontSize: 11, color: T.textSub }}>Correct</div></div>
+            <div style={{ background: "#B2223422", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#B22234" }}>{FULL_TEST_SIZE-totalCorrect}</div><div style={{ fontSize: 11, color: T.textSub }}>Missed</div></div>
+            <div style={{ background: "#C9A22722", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 20, fontWeight: 900, color: "#C9A227" }}>+{xpBonus}</div><div style={{ fontSize: 11, color: T.textSub }}>XP Bonus</div></div>
           </div>
         </div>
         <div style={{ padding: "20px 16px 0" }}>
@@ -2356,7 +2365,7 @@ function App() {
           {testResults.map((r, i) => {
             const isOfficial = OFFICIAL_IDS.includes(r.q.id);
             return (
-              <div key={i} style={{ background: r.correct ? "#1a3a1a" : "#2a1a1a", border: `1px solid ${r.correct ? "#2E7D4644" : "#B2223444"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+              <div key={i} style={{ background: r.correct ? T.successBg : T.errorBg, border: `1px solid ${r.correct ? "#2E7D4644" : "#B2223444"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <span style={{ fontSize: 18, flexShrink: 0 }}>{r.correct ? "✅" : "❌"}</span>
                   <div style={{ flex: 1 }}>
