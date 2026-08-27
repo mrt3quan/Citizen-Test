@@ -2043,15 +2043,15 @@ function App() {
             return (
               <button key={l.id} onClick={() => { setStudyLessonId(l.id); setScreen("study"); }} style={{
                 width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 12, marginBottom: 8, borderRadius: 14,
-                border: `1px solid ${T.border}`, background: T.card, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                border: `1px solid ${T.border}`, background: T.card, color: T.text, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
               }}>
                 <div style={{ width: 34, height: 34, borderRadius: 10, background: `${l.color}1a`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Icon name={l.icon} size={16} color={l.color} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{l.title}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{l.title}</div>
                 </div>
-                <Icon name={done ? "check-circle" : "circle"} size={18} color={done ? "#2E7D46" : T.track} />
+                <Icon name={done ? "check-circle" : "circle"} size={18} color={done ? "#2E7D46" : T.textSub} />
               </button>
             );
           })}
