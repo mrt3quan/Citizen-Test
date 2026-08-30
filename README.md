@@ -16,4 +16,18 @@ local storage.
   (Manage → Practice List). A dedicated card appears on the home screen
   whenever you have flagged questions.
 
+## UI/UX polish — v20
 
+This build includes a visual/UX refinement pass inspired by modern education-app patterns:
+
+- More visual progress tracking and a clearer learning path
+- A personalized **Continue learning** action on the Home screen
+- Clearer context for the active 100/128-question test and selected state
+- Cleaner primary study-mode cards and secondary actions
+- A more focused full practice-test CTA with the correct pass threshold shown
+- A redesigned Progress screen with mastery visualization and lesson-level status bars
+- Manage tabs now use the custom art assets and scroll horizontally on small screens instead of squeezing five tabs across
+- Dedicated Test Version / My State art is used during onboarding
+- Softer shadows, better focus states, hover/tap feedback, and reduced-motion support
+
+The quiz logic, localStorage data, separate progress for the 100/128 versions, custom questions, preferred answers, state data, and PWA behavior are unchanged.

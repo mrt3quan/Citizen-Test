@@ -50,9 +50,19 @@
   /* Smooth, tactile feedback for every interactive element without touching
      the app's inline styles — a soft press instead of an abrupt state swap. */
   button, a { transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease; }
-  button:active:not(:disabled), a:active { transform: scale(0.97); }
+  button:active:not(:disabled), a:active { transform: scale(0.975); }
   button:disabled { cursor: not-allowed; }
-  input, textarea { transition: border-color 0.15s ease, box-shadow 0.15s ease; font-family: inherit; }
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 3px solid rgba(74,144,217,.45);
+    outline-offset: 2px;
+  }
+  input, textarea, select { transition: border-color 0.15s ease, box-shadow 0.15s ease; font-family: inherit; }
+  @media (hover:hover) and (pointer:fine) {
+    button:not(:disabled):hover { filter: brightness(1.04); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
 </style>
 
 <!-- React + Babel (CDN) — makes this a plain web page, no build step needed -->
@@ -1484,6 +1494,10 @@ function App() {
   const level = Math.floor(xp / 100) + 1;
   const overallLessonPct = Math.round((Object.keys(completedLessons).length / LESSONS.length) * 100);
   const xpInLevel = xp % 100;
+  const nextLesson = LESSONS.find(l => !completedLessons[l.id]) || LESSONS[0];
+  const versionLabel = testVersion === "128" ? "2025 · 128 Questions" : "2008 · 100 Questions";
+  const passLabel = testVersion === "128" ? "12 of 20 to pass" : "6 of 10 to pass";
+  const stateLabel = myState || "Set your state";
 
   function effAnswer(q) { return preferredAnswers[q.id] || q.a; }
   function allPool() { return [...allQuestions, ...customQuestions]; }
@@ -1663,7 +1677,7 @@ function App() {
   const progress = questions.length > 0 ? (qIndex / questions.length) * 100 : 0;
   const finalCorrect = feedback === "correct" ? correctCount + 1 : correctCount;
 
-  const R = { pill: 999, card: 20, shadow: "0 6px 20px rgba(0,0,0,0.35)", shadowSm: "0 3px 10px rgba(0,0,0,0.3)" };
+  const R = { pill: 999, card: 22, shadow: "0 16px 40px rgba(0,0,0,0.22)", shadowSm: "0 6px 20px rgba(0,0,0,0.16)" };
   // Theme tokens — swaps the app's core surfaces between dark and light.
   // Colored buttons/badges (green/blue/red/gold with white text) are left
   // untouched on purpose since they sit on their own bright background,
@@ -1689,7 +1703,7 @@ function App() {
     return (
       <div style={{ ...S.app, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh", padding: "32px 24px" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src="mascot-book.png" alt="" style={{ width: 72, height: 72, objectFit: "contain", marginBottom: 14 }} />
+          <img src="icon-version.png" alt="" style={{ width: 82, height: 82, objectFit: "contain", marginBottom: 14 }} />
           <h1 style={{ fontSize: 22, fontWeight: 900, margin: "0 0 8px" }}>Which test are you studying for?</h1>
           <p style={{ fontSize: 13, color: T.textSub, lineHeight: 1.6 }}>USCIS updated the civics test in 2025. Pick the version that matches your case — you can switch anytime in Settings.</p>
         </div>
@@ -1734,7 +1748,7 @@ function App() {
     return (
       <div style={{ ...S.app, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh", padding: "32px 24px" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <img src="mascot-thumbsup.png" alt="" style={{ width: 68, height: 68, objectFit: "contain", marginBottom: 14 }} />
+          <img src="icon-mystate.png" alt="" style={{ width: 82, height: 82, objectFit: "contain", marginBottom: 14 }} />
           <h1 style={{ fontSize: 20, fontWeight: 900, margin: "0 0 8px" }}>What state do you live in?</h1>
           <p style={{ fontSize: 13, color: T.textSub, lineHeight: 1.6 }}>We will fill in your Governor, Senators, and Capital automatically. You can skip this and set it up later.</p>
         </div>
@@ -1787,161 +1801,96 @@ function App() {
   /* ============================ HOME ============================ */
   if (screen === "home") return (
     <div style={S.appNav}>
-      {/* Top bar: streak/xp chip left, theme toggle right */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px 0" }}>
+      {/* Compact status bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px 0" }}>
         <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, background: T.card, borderRadius: R.pill, padding: "6px 12px", boxShadow: R.shadowSm }}>
-            <Icon name="flame" size={14} color="#C9A227" /><span style={{ fontSize: 13, fontWeight: 800, color: "#C9A227" }}>{streak}</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: T.card, border: `1px solid ${T.border}`, borderRadius: R.pill, padding: "7px 11px", boxShadow: R.shadowSm }}>
+            <Icon name="flame" size={15} color="#C9A227" /><span style={{ fontSize: 12, fontWeight: 800, color: T.text }}>{streak}</span><span style={{ fontSize: 9.5, color: T.textSub, fontWeight: 700 }}>STREAK</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, background: T.card, borderRadius: R.pill, padding: "6px 12px", boxShadow: R.shadowSm }}>
-            <Icon name="zap" size={14} color="#2E7D46" /><span style={{ fontSize: 13, fontWeight: 800, color: "#2E7D46" }}>{xp}</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Switch theme" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.card, border: "none", borderRadius: 12, width: 36, height: 36, cursor: "pointer", boxShadow: R.shadowSm }}>
-            <Icon name={theme === "dark" ? "moon" : "sun"} size={16} color={T.textSub} />
-          </button>
-        </div>
-      </div>
-
-      {/* Centered logo/title */}
-      <div style={{ textAlign: "center", padding: "22px 20px 8px" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 88, height: 88, borderRadius: "50%", background: "radial-gradient(circle, rgba(74,144,217,0.16) 0%, rgba(74,144,217,0) 72%)", marginBottom: 4 }}>
-          <img src="mascot-thumbsup.png" alt="" style={{ width: 64, height: 64, objectFit: "contain" }} />
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 4 }}>Civic Test</div>
-        <div style={{ fontSize: 12, color: T.textSub, marginTop: 4 }}>Everything you need to pass the U.S. civics test</div>
-      </div>
-
-      {/* Stat cards: Progress ring + Level bar */}
-      <div style={{ display: "flex", gap: 10, padding: "14px 16px 0" }}>
-        <div style={{ flex: 1, background: T.card, borderRadius: 18, padding: "14px", boxShadow: R.shadowSm, border: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
-          <svg width="44" height="44" viewBox="0 0 44 44" style={{ flexShrink: 0 }}>
-            <circle cx="22" cy="22" r="18" fill="none" stroke={T.track} strokeWidth="5" />
-            <circle cx="22" cy="22" r="18" fill="none" stroke="#4A90D9" strokeWidth="5" strokeLinecap="round"
-              strokeDasharray={`${(overallLessonPct/100) * 113.1} 113.1`} transform="rotate(-90 22 22)" />
-            <text x="22" y="26" textAnchor="middle" fontSize="11" fontWeight="800" fill="#4A90D9">{overallLessonPct}%</text>
-          </svg>
-          <div>
-            <div style={{ fontSize: 10.5, color: T.textSub, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 3 }}>Progress</div>
-            <div style={{ fontSize: 12.5, color: T.text, fontWeight: 700 }}>{Object.keys(completedLessons).length}/{LESSONS.length} lessons</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: T.card, border: `1px solid ${T.border}`, borderRadius: R.pill, padding: "7px 11px", boxShadow: R.shadowSm }}>
+            <Icon name="zap" size={15} color="#4A90D9" /><span style={{ fontSize: 12, fontWeight: 800, color: T.text }}>{xp}</span><span style={{ fontSize: 9.5, color: T.textSub, fontWeight: 700 }}>XP</span>
           </div>
         </div>
-        <div style={{ flex: 1, background: T.card, borderRadius: 18, padding: "14px", boxShadow: R.shadowSm, border: `1px solid ${T.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 8, background: "#C9A22722", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name="trophy" size={14} color="#C9A227" /></div>
-            <span style={{ fontSize: 10.5, color: T.textSub, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>Level {level}</span>
-          </div>
-          <div style={{ height: 7, background: T.input, borderRadius: R.pill, overflow: "hidden", marginBottom: 6 }}>
-            <div style={{ height: "100%", width: `${xpInLevel}%`, background: "linear-gradient(90deg,#C9A227,#e0c158)", borderRadius: R.pill, transition: "width 0.5s" }} />
-          </div>
-          <div style={{ fontSize: 11, color: T.textSub }}>{xpInLevel}/100 XP to next</div>
-        </div>
-      </div>
-
-      {/* Quick Actions grid */}
-      <div style={{ padding: "18px 16px 0" }}>
-        <div style={{ fontSize: 11, color: T.textSub, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 10 }}>Quick Actions</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-          {[
-            ["list-check", "Choice", "#2E7D46", () => setMode("multiple"), mode === "multiple"],
-            ["pencil", "Writing", "#4A90D9", () => setMode("writing"), mode === "writing"],
-            ["layers", "Learn", "#C9A227", () => setMode("learn"), mode === "learn"],
-            ["flag", "Focus List", "#B22234", () => practiceList.length > 0 && startLesson({ id: "practice", title: "Need More Practice", icon: "flag", color: "#B22234", practiceList: true }, mode), false],
-            ["target", "Full Test", "#4A90D9", () => startFullTest(mode), false],
-            ["map-pin", "My State", "#22C7A8", () => { setManageTab("state"); setScreen("manage"); }, false],
-          ].map(([icon, label, color, action, active]) => (
-            <button key={label} onClick={action} style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-              padding: "14px 4px", borderRadius: 16, cursor: "pointer", fontFamily: "inherit",
-              background: active ? `${color}14` : T.card,
-              border: active ? `1.5px solid ${color}66` : `1px solid ${T.border}`,
-              boxShadow: active ? `0 2px 10px ${color}22` : R.shadowSm,
-              transition: "all 0.15s",
-            }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: active ? `linear-gradient(145deg, ${color}, ${color}cc)` : `${color}1a`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: active ? `0 2px 8px ${color}44` : "none" }}>
-                <Icon name={icon} size={18} color={active ? "#fff" : color} />
-              </div>
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: active ? color : T.text }}>{label}</span>
-            </button>
-          ))}
-        </div>
-        {practiceList.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 10.5, color: "#B22234", textAlign: "center", marginTop: 8 }}>
-            <Icon name="flag" size={11} color="#B22234" /> {practiceList.length} question{practiceList.length !== 1 ? "s" : ""} in your focus list
-          </div>
-        )}
-      </div>
-
-      {/* Full Practice Test promo banner */}
-      <div style={{ padding: "18px 16px 0" }}>
-        <button onClick={() => startFullTest(mode)} style={{
-          width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left",
-          background: "linear-gradient(135deg,#1d2c4d,#16213a)", border: "1.5px solid #4A90D944",
-          borderRadius: 20, padding: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: T.shadow,
-        }}>
-          <img src="mascot-trophy.png" alt="" style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "inline-block", fontSize: 9.5, fontWeight: 800, color: "#0f1923", background: "#C9A227", padding: "3px 9px", borderRadius: 6, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Real test style</div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Full Practice Test</div>
-            <div style={{ fontSize: 11.5, color: "#9db0d4" }}>{FULL_TEST_SIZE} random questions, just like the real thing</div>
-          </div>
-          <span style={{ fontSize: 20, color: "#4A90D9" }}>›</span>
+        <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Switch theme" aria-label="Switch theme" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.card, border: `1px solid ${T.border}`, borderRadius: 13, width: 40, height: 40, cursor: "pointer", boxShadow: R.shadowSm }}>
+          <Icon name={theme === "dark" ? "moon" : "sun"} size={17} color={T.textSub} />
         </button>
       </div>
 
-      <div style={{ padding: "18px 16px 8px", fontSize: 11, color: T.textSub, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>Lessons</div>
+      {/* Brand + personalized context */}
+      <div style={{ textAlign: "center", padding: "18px 20px 8px" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 84, height: 84, borderRadius: "50%", background: theme === "dark" ? "radial-gradient(circle, rgba(74,144,217,.18), rgba(74,144,217,0) 70%)" : "radial-gradient(circle, rgba(74,144,217,.11), rgba(74,144,217,0) 70%)" }}>
+          <img src="mascot-thumbsup.png" alt="Civic Test eagle mascot" style={{ width: 64, height: 64, objectFit: "contain" }} />
+        </div>
+        <div style={{ fontSize: 23, fontWeight: 900, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 4 }}>Civic Test</div>
+        <div style={{ fontSize: 12, color: T.textSub, marginTop: 4 }}>A focused path to your U.S. civics interview</div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 7, flexWrap: "wrap", marginTop: 12 }}>
+          <button onClick={() => { setManageTab("version"); setScreen("manage"); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${T.border}`, background: T.card, color: T.textSub, borderRadius: R.pill, padding: "6px 10px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Icon name="book-open" size={12} color="#4A90D9" /> {versionLabel}</button>
+          <button onClick={() => { setManageTab("state"); setScreen("manage"); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${T.border}`, background: T.card, color: T.textSub, borderRadius: R.pill, padding: "6px 10px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Icon name="map-pin" size={12} color="#22C7A8" /> {stateLabel}</button>
+        </div>
+      </div>
+
+      {/* Personalized learning-path card — progress visualization + one obvious next action */}
+      <div style={{ padding: "12px 16px 0" }}>
+        <div style={{ background: theme === "dark" ? "linear-gradient(145deg,#18263a,#142131)" : "linear-gradient(145deg,#ffffff,#f8fbff)", border: `1px solid ${theme === "dark" ? "rgba(86,156,230,.20)" : "rgba(74,144,217,.14)"}`, borderRadius: 24, padding: 17, boxShadow: T.shadow }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <svg width="62" height="62" viewBox="0 0 62 62" style={{ flexShrink: 0 }}>
+              <circle cx="31" cy="31" r="25" fill="none" stroke={T.track} strokeWidth="6" />
+              <circle cx="31" cy="31" r="25" fill="none" stroke="#4A90D9" strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(overallLessonPct/100) * 157.1} 157.1`} transform="rotate(-90 31 31)" />
+              <text x="31" y="35" textAnchor="middle" fontSize="13" fontWeight="900" fill="#4A90D9">{overallLessonPct}%</text>
+            </svg>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10.5, color: T.textSub, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>Your learning path</div>
+              <div style={{ fontSize: 16, fontWeight: 850, color: T.text, marginTop: 3 }}>{Object.keys(completedLessons).length}/{LESSONS.length} lessons complete</div>
+              <div style={{ height: 6, background: T.track, borderRadius: R.pill, overflow: "hidden", marginTop: 9 }}><div style={{ height: "100%", width: `${overallLessonPct}%`, background: "linear-gradient(90deg,#4A90D9,#6CB6FF)", borderRadius: R.pill }} /></div>
+            </div>
+          </div>
+          <button onClick={() => { setStudyLessonId(nextLesson.id); setScreen("study"); }} style={{ marginTop: 15, width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left", background: theme === "dark" ? "rgba(74,144,217,.10)" : "#EEF6FF", border: "1px solid rgba(74,144,217,.24)", borderRadius: 16, padding: "12px 13px", cursor: "pointer", fontFamily: "inherit" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 12, background: `linear-gradient(145deg,${nextLesson.color},${nextLesson.color}cc)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name={nextLesson.icon} size={18} color="#fff" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 10, fontWeight: 800, color: "#4A90D9", textTransform: "uppercase", letterSpacing: ".07em" }}>{overallLessonPct === 100 ? "Review next" : "Continue learning"}</div><div style={{ fontSize: 13.5, fontWeight: 800, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{nextLesson.title}</div></div>
+            <span style={{ fontSize: 22, color: "#4A90D9" }}>›</span>
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}><div style={{ width: 28, height: 28, borderRadius: 9, background: "#C9A22718", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="trophy" size={14} color="#C9A227" /></div><div style={{ flex: 1 }}><div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: T.textSub, marginBottom: 5 }}><span>Level {level}</span><span>{xpInLevel}/100 XP</span></div><div style={{ height: 5, background: T.track, borderRadius: R.pill, overflow: "hidden" }}><div style={{ height: "100%", width: `${xpInLevel}%`, background: "linear-gradient(90deg,#C9A227,#E8C85C)", borderRadius: R.pill }} /></div></div></div>
+        </div>
+      </div>
+
+      {/* Primary study modes */}
+      <div style={{ padding: "20px 16px 0" }}>
+        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", marginBottom: 10 }}><div><div style={{ fontSize: 11, color: T.textSub, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>Choose how to study</div><div style={{ fontSize: 11, color: T.textSub, marginTop: 3 }}>Switch modes anytime</div></div><div style={{ fontSize: 10.5, color: "#4A90D9", fontWeight: 800 }}>{mode === "multiple" ? "Choice active" : mode === "writing" ? "Writing active" : "Learn active"}</div></div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+          {[["list-check","Choice","#2E7D46","multiple"],["pencil","Writing","#4A90D9","writing"],["book-open","Learn","#7A5AC8","learn"]].map(([icon,label,color,m]) => {
+            const active = mode === m;
+            return <button key={m} onClick={() => setMode(m)} style={{ minHeight: 104, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 6px", borderRadius: 18, cursor: "pointer", fontFamily: "inherit", background: active ? `${color}14` : T.card, border: active ? `1.5px solid ${color}` : `1px solid ${T.border}`, boxShadow: active ? `0 8px 22px ${color}18` : R.shadowSm }}><div style={{ width: 42, height: 42, borderRadius: 13, background: active ? `linear-gradient(145deg,${color},${color}cc)` : `${color}16`, display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={icon} size={20} color={active ? "#fff" : color} /></div><span style={{ fontSize: 11.5, fontWeight: 800, color: active ? color : T.text }}>{label}</span></button>
+          })}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 9 }}>
+          {[["flag","Focus list","#B22234",() => practiceList.length > 0 ? startLesson({ id: "practice", title: "Need More Practice", icon: "flag", color: "#B22234", practiceList: true }, mode) : (setManageTab("practice"),setScreen("manage"))],["target","Full test","#C9A227",() => startFullTest(mode)],["map-pin","My state","#22C7A8",() => { setManageTab("state"); setScreen("manage"); }]].map(([icon,label,color,action]) => <button key={label} onClick={action} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 4px", borderRadius: 14, border: `1px solid ${T.border}`, background: T.card, color: T.text, fontSize: 10.5, fontWeight: 750, cursor: "pointer", fontFamily: "inherit" }}><Icon name={icon} size={14} color={color} />{label}</button>)}
+        </div>
+      </div>
+
+      {/* Real-test CTA */}
+      <div style={{ padding: "18px 16px 0" }}>
+        <button onClick={() => startFullTest(mode)} style={{ position: "relative", overflow: "hidden", width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", background: theme === "dark" ? "linear-gradient(135deg,#1A2D57,#13233F)" : "linear-gradient(135deg,#EAF2FF,#F5F8FF)", border: "1px solid rgba(74,144,217,.35)", borderRadius: 22, padding: "15px 14px", cursor: "pointer", fontFamily: "inherit", boxShadow: R.shadowSm }}>
+          <div style={{ position: "absolute", width: 150, height: 150, borderRadius: "50%", right: -55, top: -80, background: "radial-gradient(circle,rgba(74,144,217,.22),transparent 68%)" }} />
+          <img src="mascot-trophy.png" alt="" style={{ width: 58, height: 58, objectFit: "contain", flexShrink: 0, position: "relative" }} />
+          <div style={{ flex: 1, position: "relative" }}><div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 850, color: theme === "dark" ? "#0f1923" : "#6d5400", background: "#E6BE34", padding: "3px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}><Icon name="star" size={9} color="currentColor" /> Real test style</div><div style={{ fontSize: 16, fontWeight: 850, color: T.text }}>Full Practice Test</div><div style={{ fontSize: 11.5, color: T.textSub, marginTop: 2 }}>{FULL_TEST_SIZE} questions · {passLabel}</div></div>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(74,144,217,.14)", border: "1px solid rgba(74,144,217,.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A90D9", fontSize: 22, position: "relative" }}>›</div>
+        </button>
+      </div>
+
+      {/* Lessons */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 16px 9px" }}><div style={{ fontSize: 11, color: T.textSub, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>Lessons</div><button onClick={() => setScreen("study")} style={{ background: "transparent", border: 0, color: "#4A90D9", fontSize: 10.5, fontWeight: 800, cursor: "pointer" }}>Open Study →</button></div>
       <div style={{ padding: "0 16px" }}>
         {LESSONS.map((lesson) => {
           const done = !!completedLessons[lesson.id];
-          return (
-            <button key={lesson.id} onClick={() => startLesson(lesson, mode)} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 16, padding: 16, marginBottom: 12, borderRadius: 20,
-              border: done ? `1.5px solid ${lesson.color}55` : `1.5px solid ${T.border}`,
-              background: done ? `linear-gradient(135deg, ${lesson.color}1c, ${lesson.color}0a)` : T.card,
-              boxShadow: done ? `0 3px 10px ${lesson.color}18` : R.shadowSm,
-              cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "transform 0.15s",
-            }}>
-              <div style={{ width: 54, height: 54, borderRadius: 16, background: `linear-gradient(145deg, ${lesson.color}, ${lesson.color}cc)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 3px 8px ${lesson.color}33` }}><Icon name={lesson.icon} size={26} color="#fff" /></div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 3 }}>{lesson.title}</div>
-                <div style={{ fontSize: 12, color: T.textSub }}>{lesson.ids.length} questions · {lesson.ids.length * 10} XP</div>
-              </div>
-              {done
-                ? <div style={{ width: 34, height: 34, borderRadius: "50%", background: `${lesson.color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name="check-circle" size={17} color={lesson.color} /></div>
-                : <div style={{ minWidth: 76, textAlign: "center", padding: "7px 10px", borderRadius: R.pill, background: lesson.color, fontSize: 11.5, fontWeight: 800, color: "#fff", boxShadow: `0 2px 8px ${lesson.color}44`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                    {mode === "writing" ? <><Icon name="pencil" size={12} color="#fff" /> WRITE</> : mode === "learn" ? <><Icon name="layers" size={12} color="#fff" /> LEARN</> : "START"}
-                  </div>}
-            </button>
-          );
+          return <button key={lesson.id} onClick={() => startLesson(lesson, mode)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, padding: 13, marginBottom: 9, borderRadius: 18, border: done ? `1px solid ${lesson.color}44` : `1px solid ${T.border}`, background: T.card, boxShadow: R.shadowSm, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}><div style={{ width: 48, height: 48, borderRadius: 15, background: `linear-gradient(145deg,${lesson.color},${lesson.color}cf)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name={lesson.icon} size={23} color="#fff" /></div><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lesson.title}</div><div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: T.textSub }}><span>{lesson.ids.length} questions</span><span style={{ opacity: .55 }}>•</span><span>{lesson.ids.length*10} XP</span></div></div><div style={{ flexShrink: 0, minWidth: 58, display: "flex", justifyContent: "flex-end" }}>{done ? <div style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#2E7D46", fontSize: 10.5, fontWeight: 800 }}><Icon name="check-circle" size={16} color="#2E7D46" />Done</div> : <div style={{ padding: "7px 11px", borderRadius: R.pill, background: `${lesson.color}16`, border: `1px solid ${lesson.color}33`, color: lesson.color, fontSize: 10.5, fontWeight: 850 }}>START</div>}</div></button>
         })}
-        {customQuestions.length > 0 && (
-          <button onClick={() => startLesson({ id: "custom", title: "My Custom Questions", icon: "pencil", color: "#8B3A62", custom: true, ids: customQuestions.map(q=>q.id) }, mode)} style={{
-            width: "100%", display: "flex", alignItems: "center", gap: 16, padding: 16, marginBottom: 12, borderRadius: 20,
-            border: `1.5px solid ${T.border}`, background: T.card, boxShadow: R.shadowSm, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-          }}>
-            <div style={{ width: 54, height: 54, borderRadius: 16, background: "linear-gradient(145deg,#8B3A62,#c2185b)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 12px #8B3A6255" }}><Icon name="pencil" size={26} color="#fff" /></div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 3 }}>My Custom Questions</div>
-              <div style={{ fontSize: 12, color: T.textSub }}>{customQuestions.length} question{customQuestions.length !== 1 ? "s" : ""}</div>
-            </div>
-          </button>
-        )}
+        {customQuestions.length > 0 && <button onClick={() => startLesson({ id: "custom", title: "My Custom Questions", icon: "pencil", color: "#8B3A62", custom: true, ids: customQuestions.map(q=>q.id) }, mode)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, padding: 13, marginBottom: 9, borderRadius: 18, border: `1px solid ${T.border}`, background: T.card, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}><div style={{ width: 48, height: 48, borderRadius: 15, background: "linear-gradient(145deg,#8B3A62,#B45582)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="pencil" size={23} color="#fff" /></div><div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>My Custom Questions</div><div style={{ fontSize: 11.5, color: T.textSub, marginTop: 3 }}>{customQuestions.length} saved question{customQuestions.length === 1 ? "" : "s"}</div></div><span style={{ color: "#8B3A62", fontSize: 20 }}>›</span></button>}
       </div>
 
-      {/* Footer: privacy note, disclaimer, support link */}
-      <div style={{ padding: "8px 20px 24px", textAlign: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 11, color: T.textSub, lineHeight: 1.6, marginBottom: 14 }}>
-          <Icon name="lock" size={12} color={T.textSub} /> Your progress stays on this device — nothing is sent anywhere.
-        </div>
-        <div style={{ fontSize: 10.5, color: T.textSub, lineHeight: 1.6, marginBottom: 18, padding: "0 8px" }}>
-          This is an independent study tool, not affiliated with or endorsed by USCIS or the U.S. government.
-          Official answers may change — always verify current officials at{" "}
-          <a href="https://uscis.gov/citizenship/testupdates" target="_blank" rel="noopener noreferrer" style={{ color: "#4A90D9" }}>
-            uscis.gov/citizenship/testupdates
-          </a>{" "}
-          before your interview. Provided "as is" with no warranty.
-        </div>
+      {/* Quiet trust/footer content */}
+      <div style={{ padding: "14px 20px 24px", textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 10.5, color: T.textSub, lineHeight: 1.5 }}><Icon name="lock" size={11} color={T.textSub} /> Progress is stored only on this device.</div>
+        <div style={{ fontSize: 9.5, color: T.textSub, opacity: .8, lineHeight: 1.5, marginTop: 8, marginBottom: 16 }}>Independent study tool. Verify changing official answers with USCIS before your interview.</div>
         <a
           href="https://buymeacoffee.com/min6789"
           target="_blank"
@@ -2067,84 +2016,27 @@ function App() {
     const passRate = testsTaken > 0 ? Math.round((testsPassed / testsTaken) * 100) : 0;
     return (
       <div style={S.appNav}>
-        <div style={{ padding: "16px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 20, fontWeight: 900 }}>Progress</div>
-          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Switch theme" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.card, border: "none", borderRadius: 12, width: 36, height: 36, cursor: "pointer", boxShadow: R.shadowSm }}>
-            <Icon name={theme === "dark" ? "moon" : "sun"} size={16} color={T.textSub} />
-          </button>
-        </div>
+        <div style={{ padding: "16px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}><div><div style={{ fontSize: 20, fontWeight: 900 }}>Your progress</div><div style={{ fontSize: 11, color: T.textSub, marginTop: 3 }}>{versionLabel}</div></div><button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Switch theme" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, width: 38, height: 38, cursor: "pointer", boxShadow: R.shadowSm }}><Icon name={theme === "dark" ? "moon" : "sun"} size={16} color={T.textSub} /></button></div>
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 20px 8px" }}>
-          <svg width="132" height="132" viewBox="0 0 132 132">
-            <circle cx="66" cy="66" r="56" fill="none" stroke={T.track} strokeWidth="12" />
-            <circle cx="66" cy="66" r="56" fill="none" stroke="#4A90D9" strokeWidth="12" strokeLinecap="round"
-              strokeDasharray={`${(overallLessonPct/100) * 351.9} 351.9`} transform="rotate(-90 66 66)" />
-            <text x="66" y="72" textAnchor="middle" fontSize="26" fontWeight="900" fill="#4A90D9">{overallLessonPct}%</text>
-          </svg>
-          <div style={{ fontSize: 13, color: T.textSub, marginTop: 8 }}>{Object.keys(completedLessons).length} of {LESSONS.length} lessons complete</div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, padding: "18px 16px 0" }}>
-          <div style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 14, textAlign: "center" }}>
-            <Icon name="flame" size={20} color="#C9A227" style={{ margin: "0 auto 6px" }} />
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{streak}</div>
-            <div style={{ fontSize: 10.5, color: T.textSub }}>Day streak</div>
-          </div>
-          <div style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 14, textAlign: "center" }}>
-            <Icon name="zap" size={20} color="#2E7D46" style={{ margin: "0 auto 6px" }} />
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{xp}</div>
-            <div style={{ fontSize: 10.5, color: T.textSub }}>Total XP</div>
-          </div>
-          <div style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 14, textAlign: "center" }}>
-            <Icon name="target" size={20} color="#4A90D9" style={{ margin: "0 auto 6px" }} />
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{passRate}%</div>
-            <div style={{ fontSize: 10.5, color: T.textSub }}>Test pass rate</div>
+        <div style={{ padding: "18px 16px 0" }}>
+          <div style={{ background: theme === "dark" ? "linear-gradient(145deg,#18263a,#142131)" : "linear-gradient(145deg,#fff,#f8fbff)", border: `1px solid ${T.border}`, borderRadius: 24, padding: 18, boxShadow: T.shadow }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 18 }}><svg width="108" height="108" viewBox="0 0 108 108"><circle cx="54" cy="54" r="44" fill="none" stroke={T.track} strokeWidth="10"/><circle cx="54" cy="54" r="44" fill="none" stroke="#4A90D9" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(overallLessonPct/100)*276.5} 276.5`} transform="rotate(-90 54 54)"/><text x="54" y="51" textAnchor="middle" fontSize="22" fontWeight="900" fill="#4A90D9">{overallLessonPct}%</text><text x="54" y="68" textAnchor="middle" fontSize="9" fontWeight="700" fill={T.textSub}>MASTERED</text></svg><div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: T.textSub, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>Civics mastery</div><div style={{ fontSize: 19, color: T.text, fontWeight: 900, marginTop: 4 }}>{Object.keys(completedLessons).length} of {LESSONS.length} lessons</div><div style={{ fontSize: 11.5, color: T.textSub, lineHeight: 1.5, marginTop: 5 }}>{overallLessonPct >= 75 ? "You’re close — keep reviewing weak topics." : overallLessonPct >= 35 ? "Good momentum. Consistency matters more than speed." : "Build momentum one short lesson at a time."}</div></div></div>
           </div>
         </div>
 
-        <div style={{ padding: "20px 16px 0" }}>
-          <div style={{ background: T.card, borderRadius: 18, padding: "14px 16px", boxShadow: R.shadowSm, border: `1px solid ${T.border}`, marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <div style={{ width: 26, height: 26, borderRadius: 8, background: "#C9A22722", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name="trophy" size={14} color="#C9A227" /></div>
-              <span style={{ fontSize: 10.5, color: T.textSub, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>Level {level}</span>
-            </div>
-            <div style={{ height: 7, background: T.input, borderRadius: R.pill, overflow: "hidden", marginBottom: 6 }}>
-              <div style={{ height: "100%", width: `${xpInLevel}%`, background: "linear-gradient(90deg,#C9A227,#e0c158)", borderRadius: R.pill }} />
-            </div>
-            <div style={{ fontSize: 11, color: T.textSub }}>{xpInLevel}/100 XP to next level</div>
-          </div>
-
-          <div style={{ fontSize: 11, color: T.textSub, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 10 }}>Lessons</div>
-          {LESSONS.map(l => {
-            const done = !!completedLessons[l.id];
-            return (
-              <button key={l.id} onClick={() => { setStudyLessonId(l.id); setScreen("study"); }} style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 12, marginBottom: 8, borderRadius: 14,
-                border: `1px solid ${T.border}`, background: T.card, color: T.text, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-              }}>
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: `${l.color}1a`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Icon name={l.icon} size={16} color={l.color} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{l.title}</div>
-                </div>
-                <Icon name={done ? "check-circle" : "circle"} size={18} color={done ? "#2E7D46" : T.textSub} />
-              </button>
-            );
-          })}
-
-          {practiceList.length > 0 && (
-            <button onClick={() => { setManageTab("practice"); setScreen("manage"); }} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 10, marginTop: 8, padding: 13, borderRadius: 14,
-              border: "1.5px solid #B2223444", background: "#B2223412", cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-            }}>
-              <Icon name="flag" size={16} color="#B22234" />
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: "#B22234", flex: 1 }}>{practiceList.length} question{practiceList.length !== 1 ? "s" : ""} in your focus list</span>
-              <span style={{ fontSize: 16, color: "#B22234" }}>›</span>
-            </button>
-          )}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 9, padding: "12px 16px 0" }}>
+          {[["flame","#C9A227",streak,"Day streak"],["zap","#4A90D9",xp,"Total XP"],["target","#2E7D46",`${passRate}%`,"Pass rate"]].map(([icon,color,value,label]) => <div key={label} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 17, padding: "13px 8px", textAlign: "center", boxShadow: R.shadowSm }}><div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}16`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 7px" }}><Icon name={icon} size={16} color={color}/></div><div style={{ fontSize: 17, fontWeight: 900, color: T.text }}>{value}</div><div style={{ fontSize: 9.5, color: T.textSub, marginTop: 2 }}>{label}</div></div>)}
         </div>
-        <BottomNav active="progress" onNavigate={setScreen} onAdd={addCustomShortcut} T={T} />
+
+        <div style={{ padding: "18px 16px 0" }}>
+          <div style={{ background: T.card, borderRadius: 18, padding: "14px 15px", border: `1px solid ${T.border}`, marginBottom: 17 }}><div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}><div style={{ width: 30, height: 30, borderRadius: 10, background: "#C9A22716", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="trophy" size={15} color="#C9A227"/></div><div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 850, color: T.text }}>Level {level}</div><div style={{ fontSize: 10.5, color: T.textSub }}>{100-xpInLevel} XP until Level {level+1}</div></div><div style={{ fontSize: 11, color: "#C9A227", fontWeight: 850 }}>{xpInLevel}%</div></div><div style={{ height: 7, background: T.track, borderRadius: R.pill, overflow: "hidden" }}><div style={{ height: "100%", width: `${xpInLevel}%`, background: "linear-gradient(90deg,#C9A227,#E8C85C)", borderRadius: R.pill }}/></div></div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}><div style={{ fontSize: 11, color: T.textSub, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 800 }}>Lesson mastery</div><div style={{ fontSize: 10.5, color: T.textSub }}>{Object.keys(completedLessons).length}/{LESSONS.length}</div></div>
+          {LESSONS.map(l => { const done=!!completedLessons[l.id]; return <button key={l.id} onClick={() => { setStudyLessonId(l.id); setScreen("study"); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 8, borderRadius: 15, border: `1px solid ${T.border}`, background: T.card, color: T.text, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}><div style={{ width: 36, height: 36, borderRadius: 11, background: `${l.color}16`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name={l.icon} size={17} color={l.color}/></div><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><div style={{ fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l.title}</div><div style={{ fontSize: 10.5, color: done ? "#2E7D46" : T.textSub, fontWeight: 800 }}>{done ? "100%" : "0%"}</div></div><div style={{ height: 5, background: T.track, borderRadius: R.pill, overflow: "hidden", marginTop: 6 }}><div style={{ height: "100%", width: done ? "100%" : "0%", background: l.color, borderRadius: R.pill }}/></div></div><span style={{ color: T.textSub, fontSize: 18 }}>›</span></button>})}
+
+          {practiceList.length > 0 && <button onClick={() => { setManageTab("practice"); setScreen("manage"); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, marginTop: 9, padding: 13, borderRadius: 15, border: "1px solid #B2223444", background: "#B2223410", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}><Icon name="flag" size={16} color="#B22234"/><span style={{ fontSize: 12, fontWeight: 800, color: "#B22234", flex: 1 }}>{practiceList.length} question{practiceList.length === 1 ? "" : "s"} need another look</span><span style={{ color: "#B22234", fontSize: 18 }}>›</span></button>}
+        </div>
+        <BottomNav active="progress" onNavigate={setScreen} onAdd={addCustomShortcut} T={T}/>
       </div>
     );
   }
@@ -2155,36 +2047,22 @@ function App() {
     const filtered = answerFilter ? pool.filter(qq => qq.q.toLowerCase().includes(answerFilter.toLowerCase())) : pool;
     return (
       <div style={S.appNav}>
-        <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>Manage</div>
-          <button
-            onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
-            title="Switch theme"
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              background: T.card, border: `1.5px solid ${T.track}`, borderRadius: R.pill,
-              padding: "6px 12px", cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <Icon name={theme === "dark" ? "moon" : "sun"} size={14} color={T.textSub} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>{theme === "dark" ? "Dark" : "Light"}</span>
-          </button>
+        <div style={{ padding: "16px 18px 8px", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1 }}><div style={{ fontSize: 20, fontWeight: 900 }}>Manage</div><div style={{ fontSize: 10.5, color: T.textSub, marginTop: 2 }}>Personalize your study experience</div></div>
+          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title="Switch theme" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, width: 38, height: 38, cursor: "pointer", boxShadow: R.shadowSm }}><Icon name={theme === "dark" ? "moon" : "sun"} size={16} color={T.textSub}/></button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, padding: "0 16px 16px" }}>
-          {[["version","book-open","Version"],["state","map-pin","State"],["practice","flag","Focus"],["custom","pencil","Custom"],["answers","list-check","Answers"]].map(([id,icon,label]) => (
-            <button key={id} onClick={() => setManageTab(id)} style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-              padding: "8px 4px", borderRadius: 12, fontSize: 9.5, fontWeight: 700, cursor: "pointer",
-              border: manageTab === id ? "1.5px solid #4A90D9" : `1.5px solid ${T.track}`,
-              background: manageTab === id ? "#4A90D91a" : T.card,
-              color: manageTab === id ? "#4A90D9" : T.textSub,
-              minWidth: 0, transition: "all 0.15s",
-            }}>
-              <Icon name={icon} size={19} color={manageTab === id ? "#4A90D9" : T.textSub} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{label}</span>
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "8px 16px 14px", scrollbarWidth: "none" }}>
+          {[
+            ["version","icon-version.png","Test version"],
+            ["state","icon-mystate.png","My state"],
+            ["practice","icon-practicelist.png","Focus list"],
+            ["custom","icon-myquestions.png","My questions"],
+            ["answers","icon-editanswers.png","Edit answers"],
+          ].map(([id,img,label]) => {
+            const active=manageTab===id;
+            return <button key={id} onClick={() => setManageTab(id)} style={{ flex: "0 0 92px", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 6px", borderRadius: 16, cursor: "pointer", fontFamily: "inherit", border: active ? "1.5px solid #4A90D9" : `1px solid ${T.border}`, background: active ? "#4A90D912" : T.card, boxShadow: active ? "0 6px 18px rgba(74,144,217,.12)" : R.shadowSm }}><img src={img} alt="" style={{ width: 31, height: 31, objectFit: "contain" }}/><span style={{ fontSize: 9.5, fontWeight: 800, color: active ? "#4A90D9" : T.textSub, whiteSpace: "nowrap" }}>{label}</span></button>
+          })}
         </div>
 
         {manageTab === "version" && (
