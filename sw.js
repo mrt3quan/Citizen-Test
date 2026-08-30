@@ -1,4 +1,4 @@
-const CACHE_NAME = "civic-test-app-v18";
+const CACHE_NAME = "civic-test-app-v20";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
